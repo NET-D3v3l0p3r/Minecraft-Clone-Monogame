@@ -54,7 +54,7 @@ namespace MinecraftClone
         {
             // TODO: Add your initialization logic here
             this.IsFixedTimeStep = false;
-            graphics.SynchronizeWithVerticalRetrace = true;
+            graphics.SynchronizeWithVerticalRetrace = false;
             graphics.PreferredBackBufferWidth = 1080;
             graphics.PreferredBackBufferHeight = 720;
             graphics.ApplyChanges();
@@ -78,8 +78,8 @@ namespace MinecraftClone
             ChunkOptimized.RenderingBufferSize = 1024;
 
             ChunkManager = new ChunkManager();
-            ChunkManager.Width = 27;
-            ChunkManager.Depth = 27;
+            ChunkManager.Width = 12;
+            ChunkManager.Depth = 12;
 
             ChunkManager.Start(154, GlobalShares.GetRandomWord(15));
    
