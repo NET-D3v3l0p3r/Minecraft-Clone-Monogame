@@ -20,14 +20,29 @@ namespace MinecraftClone.CoreII.Global
         {
             DefautCubeStructure = 0,
             Dirt = 1,
-            Grass = 7,  
+            Grass = 7,
             Cobble = 2,
             Stone = 3,
             CoalOre = 4,
             GoldOre = 5,
             IronOre = 6,
-            Water = 8
+            Water = 8,
+            Air = -1,
+            Corner
         };
+
+        public enum Face
+        {
+            Top = 3,
+            Bottom = 2,
+            Left = 0,
+            Right = 1,
+            Front = 5,
+            Back = 4
+            
+        };
+
+        
         //215
     }
 }

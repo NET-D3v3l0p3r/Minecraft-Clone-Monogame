@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MinecraftClone.Core.Misc;
 using MinecraftClone.Core.Model;
+using MinecraftClone.CoreII.Chunk;
 using MinecraftClone.CoreII.Global;
 using System;
 using System.Collections.Generic;
@@ -15,7 +16,7 @@ namespace MinecraftClone.Core.Camera
     {
         public static Vector3 Up = new Vector3(0, 1, 0);
 
-        public static MinecraftClone Game { get; set; }
+        public static MinecraftCloneGame Game { get; set; }
         public static int RenderDistance { get; set; }
 
         private static float Acceleration;
@@ -67,7 +68,7 @@ namespace MinecraftClone.Core.Camera
             MouseDPI = DPI;
             MovementSpeed = Speed;
 
-            RenderDistance = 13 * 16;
+            RenderDistance = ChunkManager.Width * 16;
             CameraPosition = new Vector3(0, 200, 0);
             ProjectionMatrix = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4,  GlobalShares.GlobalDevice.Viewport.AspectRatio, 1, RenderDistance);
 
@@ -169,9 +170,9 @@ namespace MinecraftClone.Core.Camera
         {
             var Chunk = Game.ChunkManager.GetChunkArea(Camera3D.CameraPosition);
             if (Chunk != null)
-                for (int i = 0; i < Chunk.RenderingCubes.Count; i++)
+                for (int i = 0; i < Chunk.IndexRenderer.Count; i++)
                 {
-                    var Object = Chunk.ChunkData[Chunk.RenderingCubes[i]];
+                    var Object = Chunk.ChunkData[Chunk.IndexRenderer[i]];
                     var BoundingBox = Object.BoundingBox;
 
                     if (BoundingBox.Contains(to) == ContainmentType.Contains)

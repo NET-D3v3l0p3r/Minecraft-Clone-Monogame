@@ -14,7 +14,7 @@ namespace MinecraftCloneMonoGame
         [STAThread]
         static void Main()
         {
-            using (var game = new MinecraftClone.MinecraftClone())
+            using (var game = new MinecraftClone.MinecraftCloneGame())
                 game.Run();
         }
     }

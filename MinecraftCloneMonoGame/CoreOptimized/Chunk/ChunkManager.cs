@@ -1,10 +1,12 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Core.MapGenerator;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MinecraftClone.Core.Camera;
 using MinecraftClone.Core.Misc;
 using MinecraftClone.Core.Model;
 using MinecraftClone.CoreII.Chunk.SimplexNoise;
 using MinecraftClone.CoreII.Models;
+using MinecraftCloneMonoGame.CoreOptimized.Global;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -23,13 +25,13 @@ namespace MinecraftClone.CoreII.Chunk
         public static bool PullingShaderData { get; set; }
 
         public static SimplexNoiseGenerator Generator { get; private set; }
-        public ChunkOptimized[] Chunks { get; private set; }
+        public static ChunkOptimized[] Chunks { get; private set; }
 
         public static int Width { get; set; }
         public static int Depth { get; set; }
 
-        public int SeaLevel { get; set; }
-        public int Seed { get; set; }
+        public static int SeaLevel { get; set; }
+        public static int Seed { get; set; }
 
         public static int MaximumRender { get; set; }
 
@@ -37,6 +39,8 @@ namespace MinecraftClone.CoreII.Chunk
         public static int TotalUpdate { get; set; }
 
         public static int UpdatingChunks { get; set; }
+
+        public static int[, ,] Indices { get; set; }
 
         public void Start(int sea_level, int seed)
         {
@@ -57,19 +61,20 @@ namespace MinecraftClone.CoreII.Chunk
             Models.GlobalModels.IndexModelTuple.Add(0, Global.GlobalShares.GlobalContent.Load<Model>(@"Model\Cube"));
             Cube.Initialize();
 
-            Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Grass, new Vector2(Core.MapGenerator.GlobalShares.Grass, 0));
-            Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Dirt, new Vector2(Core.MapGenerator.GlobalShares.Dirt, 0));
-            Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Stone, new Vector2(Core.MapGenerator.GlobalShares.Stone, 0));
-            Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Water, new Vector2(Core.MapGenerator.GlobalShares.Water, 0));
+            Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Grass, new Vector2(GlobalShares.Grass, 0));
+            Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Dirt, new Vector2(GlobalShares.Dirt, 0));
+            Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Stone, new Vector2(GlobalShares.Stone, 0));
+            Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Water, new Vector2(GlobalShares.Water, 0));
 
             Chunks = new ChunkOptimized[Width * Depth];
 
-            Generator = new SimplexNoise.SimplexNoiseGenerator(Seed, 1f / 256f, 1f / 256f, 1f / 256f, 1f / 256f);
+            Generator = new SimplexNoise.SimplexNoiseGenerator(Seed, 1f / 512f, 1f / 512f, 1f / 512f, 1f / 512f);
 
             Generator.Octaves = 5;
-            Generator.Factor = 0;
+            //TEST
+            Generator.Factor = 230;
 
-            ChunkOptimized.Indices = new int[16, 256, 16];
+            Indices = new int[16, 256, 16];
 
             for (int i = 0; i < 16; i++)
             {
@@ -77,7 +82,7 @@ namespace MinecraftClone.CoreII.Chunk
                 {
                     for (int k = 0; k < 256; k++)
                     {
-                        ChunkOptimized.Indices[i, k, j] = (j * 16 * 256) + ((k) * 16) + i;
+                        Indices[i, k, j] = (j * 16 * 256) + ((k) * 16) + i;
                     }
                 }
             }
@@ -90,9 +95,13 @@ namespace MinecraftClone.CoreII.Chunk
                 {
                     for (int x = 0; x < Width; x++)
                     {
-                        UploadNewChunk(new ChunkOptimized(16, 256, 16, new Vector3(x * 15, 0, y * 15)));
+                        UploadNewChunk(new ChunkOptimized(16, 256, 16, new Vector3(x * 16, 0, y * 16)));
                     }
                 }
+                Parallel.ForEach(Chunks, new Action<ChunkOptimized>(Chunk =>
+                {
+                    Chunk.Generate();
+                }));
                 sw.Stop();
                 Console.WriteLine("DONE[MAP_GENERATION: {0} s]", sw.Elapsed.TotalSeconds);
             })).Start();
@@ -114,7 +123,10 @@ namespace MinecraftClone.CoreII.Chunk
             for (int i = 0; i < Chunks.Length; i++)
             {
                 if (Chunks[i] != null)
+                {
                     Chunks[i].Render();
+                    //BoundingBoxRenderer.Render(Chunks[i].ChunkArea, Global.GlobalShares.GlobalDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Black);   
+                }
             }
         }
         public void UploadNewChunk(ChunkOptimized chunk)
@@ -122,33 +134,54 @@ namespace MinecraftClone.CoreII.Chunk
             if (ChunkIndexCounter + 1 >= Chunks.Length)
                 ChunkIndexCounter = -1;
             ChunkIndexCounter++;
-            chunk.Generate();
             Chunks[ChunkIndexCounter] = chunk;
         }
 
-        public void Remove(Ray r, float max_distance)
+        private IEnumerable<Profile> GetAllIntersectingEntities(Ray r)
         {
             var Chunk = GetChunkArea(Camera3D.CameraPosition);
+
+            float DistanceToCube = .0f;
+            int Face = 0;
+
             if (Chunk != null)
-                for (int i = 0; i < Chunk.RenderingCubes.Count; i++)
+            {
+                foreach (var Surrounding in Chunk.SurroundingChunks)
                 {
-                    int Index = Chunk.RenderingCubes[i];
-                    if ((int?)Chunk.ChunkData[Index].BoundingBox.Intersects(r) < (int)max_distance)
-                    {
-                        //Chunk.DeleteShaderData(Index);
-                        Chunk.RenderingCubes.RemoveAt(i);
-                        Chunk.ChunkData[Index].Id = (int)Global.GlobalShares.Identification.DefautCubeStructure;
-                        Chunk.Invalidate = true;
-                        return;
-                    }
+                    if (Surrounding != null)
+                        for (int i = Surrounding.IndexRenderer.Count - 1; i >= 0; i--)
+                        {
+                            int Index = Surrounding.IndexRenderer[i];
+                            if (BoundingBoxRenderer.IntersectRayVsBox(Surrounding.ChunkData[Index].BoundingBox, r, out DistanceToCube, out Face))
+                                yield return new Profile(Surrounding, Index, Face, DistanceToCube);
+                        }
                 }
+            }
+
+        }
+        /// <summary>
+        /// Gets the targeted DefaultCubeStructure as Profile{Structure}
+        /// <para />Notice: Profile is nullable.
+        /// </summary>
+        /// <param name="max_dist"></param>
+        /// <returns></returns>
+        public Profile? GetFocusedCube(float max_dist)
+        {
+            var entities = GetAllIntersectingEntities(Camera3D.Ray);
+            if (entities.Count() > 0)
+            {
+                var entity = entities.ToList().OrderBy(p => (p.AABB.Min - Camera3D.CameraPosition).Length()).ToList()[0];
+                if (entity.Distance <= max_dist)
+                    return entity;
+            }
+            return null;
         }
 
         public ChunkOptimized GetChunkArea(Vector3 coordinates)
         {
             if (ChunkManager.Generated)
                 foreach (var chunk in Chunks)
-                    if (chunk.ChunkArea.Contains(coordinates) != ContainmentType.Disjoint)
+                    if (chunk.ChunkArea.Contains(coordinates) == ContainmentType.Contains)
                         return chunk;
             return null;
         }

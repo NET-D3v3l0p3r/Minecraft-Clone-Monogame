@@ -28,12 +28,11 @@ namespace MinecraftClone.Core.Model
 
         public Matrix WorldMatrix { get; set; }
 
-
         private DynamicVertexBuffer InstancedVertexBuffer;
         private DynamicVertexBuffer InstancedTextureBuffer;
 
         private static Effect InstancingShader;
-        private bool Initialized;
+        private static bool Initialized;
 
         static VertexDeclaration InstancedVertexDeclaration = new VertexDeclaration
         (
@@ -48,26 +47,22 @@ namespace MinecraftClone.Core.Model
         );
 
         private Texture2D[] Texture2Ds;
+        private Microsoft.Xna.Framework.Graphics.Model Model;
 
         public HardwareInstancedRenderer()
         {
             WorldMatrix = Matrix.Identity;
-
-            if (!Initialized)
+            //MONOGAME BUG
+            while (!Initialized)
             {
-                while (true)
+                try
                 {
-                    try
-                    {
-                        InstancingShader = GlobalShares.GlobalContent.Load<Effect>("MainShader");
-                        break;
-                    }
-                    catch { }
+                    InstancingShader = GlobalShares.GlobalContent.Load<Effect>("MainShader");
+                    Initialized = true;
                 }
-                Initialized = true;
+                catch { }
             }
-
-
+            Model = GlobalModels.IndexModelTuple[0];
             Texture2Ds = new Texture2D[16];
 
             TextureBufferArray = new Vector2[0];
@@ -77,8 +72,6 @@ namespace MinecraftClone.Core.Model
             MatrixBuffer = new List<Matrix>();
 
         }
-
-     
 
         public void BindTexture(Texture2D texture, int index)
         {
@@ -122,37 +115,44 @@ namespace MinecraftClone.Core.Model
             InstancedVertexBuffer.SetData<Matrix>(MatrixBufferArray, 0, MatrixBufferArray.Length, SetDataOptions.Discard);
             InstancedTextureBuffer.SetData<Vector2>(TextureBufferArray, 0, TextureBufferArray.Length, SetDataOptions.Discard);
 
-            GlobalShares.GlobalDevice.SetVertexBuffers(
-                new VertexBufferBinding(Cube.VertexBuffer, 0, 0),
-                new VertexBufferBinding(InstancedVertexBuffer, 0, 1),
-                new VertexBufferBinding(InstancedTextureBuffer, 0, 1));
-
-            GlobalShares.GlobalDevice.Indices = Cube.IndexBuffer;
-
-            InstancingShader.CurrentTechnique = InstancingShader.Techniques["HardwareInstancing"];
-
-            InstancingShader.Parameters["World"].SetValue(WorldMatrix);
-            InstancingShader.Parameters["View"].SetValue(Camera3D.ViewMatrix);
-            InstancingShader.Parameters["Projection"].SetValue(Camera3D.ProjectionMatrix);
-            InstancingShader.Parameters["EyePosition"].SetValue(Camera3D.CameraPosition);
-
             for (int i = 0; i < Texture2Ds.Length; i++)
             {
-                if(Texture2Ds[i] != null)
+                if (Texture2Ds[i] != null)
                     InstancingShader.Parameters["Texture" + i].SetValue(Texture2Ds[i]);
             }
 
-            InstancingShader.Parameters["FogEnabled"].SetValue(1.0f);
-            InstancingShader.Parameters["FogColor"].SetValue(Color.CornflowerBlue.ToVector3());
-            InstancingShader.Parameters["FogStart"].SetValue(0.0f);
-            InstancingShader.Parameters["FogEnd"].SetValue(208.0f );
-
-
-            foreach (EffectPass pass in InstancingShader.CurrentTechnique.Passes)
+            foreach (var mesh in Model.Meshes)
             {
-                pass.Apply();
-                GlobalShares.GlobalDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 1, 0, 12, MatrixBufferArray.Length);
+                foreach (var meshPart in mesh.MeshParts)
+                {
 
+                    GlobalShares.GlobalDevice.SetVertexBuffers(
+                            new VertexBufferBinding(meshPart.VertexBuffer, 0, 0),
+                            new VertexBufferBinding(InstancedVertexBuffer, 0, 1),
+                            new VertexBufferBinding(InstancedTextureBuffer, 0, 1));
+
+                    GlobalShares.GlobalDevice.Indices = meshPart.IndexBuffer;
+
+                    InstancingShader.CurrentTechnique = InstancingShader.Techniques["HardwareInstancing"];
+
+                    InstancingShader.Parameters["World"].SetValue(WorldMatrix);
+                    InstancingShader.Parameters["View"].SetValue(Camera3D.ViewMatrix);
+                    InstancingShader.Parameters["Projection"].SetValue(Camera3D.ProjectionMatrix);
+                    InstancingShader.Parameters["EyePosition"].SetValue(Camera3D.CameraPosition);
+
+                    InstancingShader.Parameters["FogEnabled"].SetValue(1.0f);
+                    InstancingShader.Parameters["FogColor"].SetValue(Color.CornflowerBlue.ToVector3());
+                    InstancingShader.Parameters["FogStart"].SetValue(0.0f);
+                    InstancingShader.Parameters["FogEnd"].SetValue((float)Camera3D.RenderDistance);
+
+                    foreach (EffectPass pass in InstancingShader.CurrentTechnique.Passes)
+                    {
+                        pass.Apply();
+                        GlobalShares.GlobalDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 1, 0, 12, MatrixBufferArray.Length);
+
+                    }
+
+                }
             }
 
             return true;

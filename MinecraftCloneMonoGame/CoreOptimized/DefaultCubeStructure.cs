@@ -20,12 +20,10 @@ namespace MinecraftClone.CoreII
         public Vector3 ChunkTranslation { get; set; }
         public Matrix Transformation { get; set; }
 
-        public Vector2 TextureVector2 { get; set; }
+        public Vector2 TextureVector2;
         public float MetaData { get; set; }
 
         public BoundingBox BoundingBox { get; set; }
-         
-        public bool isAir { get; set; }
 
         public DefaultCubeStructure(int id, Vector3 position, Vector3 translation, int index) : this()
         {
@@ -36,14 +34,16 @@ namespace MinecraftClone.CoreII
 
             Initialize();
         }
-
+         
         public void Update(GameTime gTime) { if (Task != null) Task.DynamicInvoke(this); }
         public void Initialize()
         {
-            TextureVector2 = GlobalModels.IndexTextureTuple[Id];
-            Transformation = Matrix.CreateScale(1.9f) * Matrix.CreateTranslation(Position + ChunkTranslation);
-            BoundingBox = BoundingBoxRenderer.UpdateBoundingBox(GlobalModels.IndexModelTuple[0], Transformation);
-            Transformation = Matrix.CreateScale(1) * Matrix.CreateTranslation(Position + ChunkTranslation);
+
+            GlobalModels.IndexTextureTuple.TryGetValue(Id, out TextureVector2);
+            Transformation = Matrix.CreateScale(0.5f) * Matrix.CreateTranslation(Position + ChunkTranslation);
+            //THIS LINE IS CAUSING PERFOMANCE ISSUES
+            //CALCULATE BOUNDINGBOX BY OWN
+            BoundingBox = new BoundingBox(Position + ChunkTranslation - new Vector3(0.5f), Position + ChunkTranslation + new Vector3(0.5f));
         }
 
         public override string ToString()

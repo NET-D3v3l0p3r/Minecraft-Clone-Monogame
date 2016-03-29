@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace MinecraftClone.Core.MapGenerator
+namespace Core.MapGenerator
 {
     public static class GlobalShares
     {
@@ -41,7 +41,7 @@ namespace MinecraftClone.Core.MapGenerator
             string Result = "";
             for (int i = 0; i < length; i++)
             {
-                Result += Letters[CoreII.Global.GlobalShares.GlobalRandom.Next(0, Letters.Length)];
+                Result += Letters[MinecraftClone.CoreII.Global.GlobalShares.GlobalRandom.Next(0, Letters.Length)];
             }
             return Result;
 

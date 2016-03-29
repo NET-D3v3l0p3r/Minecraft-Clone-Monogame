@@ -27,28 +27,28 @@ float3 DiffuseLight = 1.25;
 float3 AmbientLight = 0.35;
 
 Texture Texture0;
-sampler Sampler0 = sampler_state { texture = <Texture0> ; magfilter = LINEAR; minfilter = LINEAR; mipfilter=LINEAR; AddressU = wrap; AddressV = wrap;};
+sampler Sampler0 = sampler_state { texture = <Texture0>; magfilter = POINT; minfilter = LINEAR; mipfilter = POINT; AddressU = wrap; AddressV = wrap; };
 
 Texture Texture1;
-sampler Sampler1 = sampler_state { texture = <Texture1> ; magfilter = LINEAR; minfilter = LINEAR; mipfilter=LINEAR; AddressU = wrap; AddressV = wrap;};
+sampler Sampler1 = sampler_state { texture = <Texture1>; magfilter = POINT; minfilter = LINEAR; mipfilter = POINT; AddressU = wrap; AddressV = wrap; };
 
 Texture Texture2;
-sampler Sampler2 = sampler_state { texture = <Texture2> ; magfilter = LINEAR; minfilter = LINEAR; mipfilter=LINEAR; AddressU = wrap; AddressV = wrap;};
+sampler Sampler2 = sampler_state { texture = <Texture2>; magfilter = POINT; minfilter = LINEAR; mipfilter = POINT; AddressU = wrap; AddressV = wrap; };
 
 Texture Texture3;
-sampler Sampler3 = sampler_state { texture = <Texture3> ; magfilter = LINEAR; minfilter = LINEAR; mipfilter=LINEAR; AddressU = wrap; AddressV = wrap;};
+sampler Sampler3 = sampler_state { texture = <Texture3>; magfilter = POINT; minfilter = LINEAR; mipfilter = POINT; AddressU = wrap; AddressV = wrap; };
 
 Texture Texture4;
-sampler Sampler4 = sampler_state { texture = <Texture4> ; magfilter = LINEAR; minfilter = LINEAR; mipfilter=LINEAR; AddressU = wrap; AddressV = wrap;};
+sampler Sampler4 = sampler_state { texture = <Texture4>; magfilter = POINT; minfilter = LINEAR; mipfilter = POINT; AddressU = wrap; AddressV = wrap; };
 
 Texture Texture5;
-sampler Sampler5 = sampler_state { texture = <Texture5> ; magfilter = LINEAR; minfilter = LINEAR; mipfilter=LINEAR; AddressU = wrap; AddressV = wrap;};
+sampler Sampler5 = sampler_state { texture = <Texture5>; magfilter = POINT; minfilter = LINEAR; mipfilter = POINT; AddressU = wrap; AddressV = wrap; };
 
 Texture Texture6;
-sampler Sampler6 = sampler_state { texture = <Texture6> ; magfilter = LINEAR; minfilter = LINEAR; mipfilter=LINEAR; AddressU = wrap; AddressV = wrap;};
+sampler Sampler6 = sampler_state { texture = <Texture6>; magfilter = POINT; minfilter = LINEAR; mipfilter = POINT; AddressU = wrap; AddressV = wrap; };
 
 Texture Texture7;
-sampler Sampler7 = sampler_state { texture = <Texture7> ; magfilter = LINEAR; minfilter = LINEAR; mipfilter=LINEAR; AddressU = wrap; AddressV = wrap;};
+sampler Sampler7 = sampler_state { texture = <Texture7>; magfilter = POINT; minfilter = LINEAR; mipfilter = POINT; AddressU = wrap; AddressV = wrap; };
 
 Texture Texture8;
 sampler Sampler8 = sampler_state { texture = <Texture8> ; magfilter = LINEAR; minfilter = LINEAR; mipfilter=LINEAR; AddressU = wrap; AddressV = wrap;};
