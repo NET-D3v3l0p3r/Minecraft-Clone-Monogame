@@ -10,11 +10,14 @@ using MinecraftClone.CoreII.Models;
 using System.Runtime.InteropServices;
 namespace MinecraftClone.CoreII
 {
-    public struct DefaultCubeStructure
+    //UPDATED TO CLASS
+    //SIGNFICANT PERFOMANCE INCREASES
+    //32x32 CHUNK-MAP ~ 512 MB!
+    public class DefaultCubeClass
     {
         public int Id { get; set; }
         public int Index { get; set; }
-        public Action<DefaultCubeStructure> Task { get; set; }
+        public Action<DefaultCubeClass> Task { get; set; }
 
         public Vector3 Position { get; set; }
         public Vector3 ChunkTranslation { get; set; }
@@ -25,7 +28,7 @@ namespace MinecraftClone.CoreII
 
         public BoundingBox BoundingBox { get; set; }
 
-        public DefaultCubeStructure(int id, Vector3 position, Vector3 translation, int index) : this()
+        public DefaultCubeClass(int id, Vector3 position, Vector3 translation, int index) 
         {
             Id = id;
             Index = index;

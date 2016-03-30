@@ -21,6 +21,8 @@ namespace MinecraftClone.CoreII.Chunk
         private int ChunkIndexCounter = -1;
 
         public static bool Generated { get; set; }
+        public static double Progress { get; set; }
+
         public static bool UploadingShaderData { get; set; }
         public static bool PullingShaderData { get; set; }
 
@@ -38,6 +40,7 @@ namespace MinecraftClone.CoreII.Chunk
         public static int TotalRender { get; set; }
         public static int TotalUpdate { get; set; }
 
+        public static int RenderingChunks { get; set; }
         public static int UpdatingChunks { get; set; }
 
         public static int[, ,] Indices { get; set; }
@@ -66,26 +69,30 @@ namespace MinecraftClone.CoreII.Chunk
             Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Stone, new Vector2(GlobalShares.Stone, 0));
             Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Water, new Vector2(GlobalShares.Water, 0));
 
-            Chunks = new ChunkOptimized[Width * Depth];
+            Indices = new int[ChunkOptimized.Width, ChunkOptimized.Height, ChunkOptimized.Depth];
 
-            Generator = new SimplexNoise.SimplexNoiseGenerator(Seed, 1f / 512f, 1f / 512f, 1f / 512f, 1f / 512f);
-
-            Generator.Octaves = 5;
-            //TEST
-            Generator.Factor = 230;
-
-            Indices = new int[16, 256, 16];
-
-            for (int i = 0; i < 16; i++)
+            for (int i = 0; i < ChunkOptimized.Width; i++)
             {
-                for (int j = 0; j < 16; j++)
+                for (int j = 0; j < ChunkOptimized.Depth; j++)
                 {
-                    for (int k = 0; k < 256; k++)
+                    for (int k = 0; k < ChunkOptimized.Height; k++)
                     {
-                        Indices[i, k, j] = (j * 16 * 256) + ((k) * 16) + i;
+                        Indices[i, k, j] = (j * ChunkOptimized.Width * ChunkOptimized.Height) + ((k) * ChunkOptimized.Depth) + i;
                     }
                 }
             }
+
+            RunGeneration(Seed);
+        }
+
+        public void RunGeneration(int seed)
+        {
+            Chunks = new ChunkOptimized[Width * Depth];
+            Seed = seed;
+
+            Generator = new SimplexNoise.SimplexNoiseGenerator(Seed, 1f / 512f, 1f / 512f, 1f / 512f, 1f / 512f);
+            Generator.Octaves = 5;
+            Generator.Factor = 230;
 
             new Thread(new ThreadStart(() =>
             {
@@ -95,7 +102,7 @@ namespace MinecraftClone.CoreII.Chunk
                 {
                     for (int x = 0; x < Width; x++)
                     {
-                        UploadNewChunk(new ChunkOptimized(16, 256, 16, new Vector3(x * 16, 0, y * 16)));
+                        UploadNewChunk(new ChunkOptimized( new Vector3(x * ChunkOptimized.Width, 0, y * ChunkOptimized.Depth)));
                     }
                 }
                 Parallel.ForEach(Chunks, new Action<ChunkOptimized>(Chunk =>
@@ -119,14 +126,15 @@ namespace MinecraftClone.CoreII.Chunk
 
         public void RenderChunks()
         {
-            TotalRender = MaximumRender = 0;
+            TotalRender = MaximumRender = RenderingChunks = 0;
             for (int i = 0; i < Chunks.Length; i++)
             {
-                if (Chunks[i] != null)
+                if (Chunks[i] != null && Camera3D.ViewFrustum.Contains(Chunks[i].ChunkArea) != ContainmentType.Disjoint)
                 {
                     Chunks[i].Render();
-                    //BoundingBoxRenderer.Render(Chunks[i].ChunkArea, Global.GlobalShares.GlobalDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Black);   
+                    RenderingChunks++;
                 }
+                    //BoundingBoxRenderer.Render(Chunks[i].ChunkArea, Global.GlobalShares.GlobalDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Black);   
             }
         }
         public void UploadNewChunk(ChunkOptimized chunk)

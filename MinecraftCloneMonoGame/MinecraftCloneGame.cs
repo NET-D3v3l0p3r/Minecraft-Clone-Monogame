@@ -20,6 +20,7 @@ using MinecraftClone.CoreII.Profiler;
 using MinecraftClone.CoreII;
 using Core.MapGenerator;
 using MinecraftCloneMonoGame.CoreOptimized.Global;
+using Earlz.BareMetal;
 namespace MinecraftClone
 {
     /// <summary>
@@ -79,13 +80,22 @@ namespace MinecraftClone
             CoreII.Global.GlobalShares.GlobalDeviceManager = graphics;
 
             ChunkManager = new ChunkManager();
-            ChunkManager.Width = 20;
-            ChunkManager.Depth = 20;
+            ChunkManager.Width = 32;
+            ChunkManager.Depth = 32;
 
 
             Camera = new Camera3D(0.0035f, 0.35f);
 
+            ChunkOptimized.Width = ChunkOptimized.Depth = 16;
+            ChunkOptimized.Height = 256;
             ChunkOptimized.RenderingBufferSize = 2048;
+
+
+            float ReservedMB = (((BareMetal.SizeOf<DefaultCubeClass>() * (ChunkOptimized.Width * ChunkOptimized.Height * ChunkOptimized.Depth)) / 1024f) / 1024f);
+
+            Console.WriteLine("::RESERVED " + ReservedMB + " MB" + Environment.NewLine +
+                              "FOR DEFAULTCUBESTRUCTURE::");
+            Console.WriteLine("::IN TOTAL: " + ReservedMB * (ChunkManager.Width * ChunkManager.Depth) + " MB!");
 
 
             ChunkManager.Start(154, GlobalShares.GetRandomWord(15));
@@ -111,6 +121,12 @@ namespace MinecraftClone
             InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.A, new Action(() => { }), new Action(() => { Camera3D.Move(new Vector3(-1, 0, 0)); }), false));
 
             InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.Escape, new Action(() => { }), new Action(() => { Exit(); }), true));
+            InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.F5, new Action(() => { }), new Action(() =>
+            {
+                ChunkManager.Generated = false;
+                ChunkManager.RunGeneration(GlobalShares.GetRandomWord(15).GetHashCode());
+
+            }), true));
 
             Camera3D.Game = this;
         }
@@ -130,7 +146,8 @@ namespace MinecraftClone
             InputManager.Update(gameTime);
             ChunkManager.Update(gameTime);
 
-            Profile = ChunkManager.GetFocusedCube(13.0f);
+            if (Camera3D.IsChangigView || Camera3D.isMoving)
+                Profile = ChunkManager.GetFocusedCube(13.0f);
 
             base.Update(gameTime);
         }
@@ -167,7 +184,9 @@ namespace MinecraftClone
 
             if (!ChunkManager.Generated)
             {
-                spriteBatch.DrawString(DebugFont, "LOADING...", new Vector2(MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferWidth / 2 - 25, MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferHeight / 2), Color.Black);
+                spriteBatch.DrawString(DebugFont, "GENERATING WORLD...: " 
+                    + (double)(ChunkManager.Progress / (ChunkManager.Width * ChunkManager.Depth)), 
+                    new Vector2(MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferWidth / 2 - 90, MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferHeight / 2), Color.Black);
                 spriteBatch.End();
                 return;
             }
@@ -186,6 +205,7 @@ namespace MinecraftClone
                     "MAP_DEPTH: " + (ChunkManager.Depth * 16) + Environment.NewLine +
                     "RENDER_BUFFER_SIZE: " + ChunkOptimized.RenderingBufferSize + Environment.NewLine +
                     "SEED: " + ChunkManager.Seed + Environment.NewLine + 
+                    "RENDERING_CHUNKS: " + ChunkManager.RenderingChunks + Environment.NewLine + 
                     "UPDATING_CHUNKS: " + ChunkManager.UpdatingChunks + Environment.NewLine +
                     "TOTAL_UPDATE: " + ChunkManager.TotalUpdate + Environment.NewLine +
                     "PULLING_SHADER_DATA: " + ChunkManager.PullingShaderData + Environment.NewLine +
@@ -198,7 +218,7 @@ namespace MinecraftClone
                     , new Vector2(0, 0), Color.Yellow);
 
 
-            spriteBatch.Draw(Crosshair, new Rectangle((int)(CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferWidth / 2 - 7.5), (int)(CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferHeight / 2), 15, 15), Color.DarkGray);
+            spriteBatch.Draw(Crosshair, new Rectangle((int)(CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferWidth / 2 - 7.5), (int)(CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferHeight / 2 -  1), 15, 15), Color.DarkGray);
             spriteBatch.End();
         }
     }

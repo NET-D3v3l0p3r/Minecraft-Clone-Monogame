@@ -9,9 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-
+using Earlz.BareMetal;
 namespace MinecraftClone.CoreII.Chunk
 {
     public sealed class ChunkOptimized
@@ -19,18 +20,18 @@ namespace MinecraftClone.CoreII.Chunk
         private static int GeneratedChunks;
         private HardwareInstancedRenderer Instancing;
 
-        public ChunkOptimized[] SurroundingChunks = new ChunkOptimized[5];
+        public ChunkOptimized[] SurroundingChunks = new ChunkOptimized[9];
         private bool Parsed;
 
         public string Id { get; private set; }
 
-        public static int Width { get; private set; }
-        public static int Height { get; private set; }
-        public static int Depth { get; private set; }
+        public static int Width { get; set; }
+        public static int Height { get; set; }
+        public static int Depth { get; set; }
 
         public Vector3 Translation { get; private set; }
 
-        public DefaultCubeStructure[] ChunkData { get; private set; }
+        public DefaultCubeClass[] ChunkData { get; private set; }
 
         public float[,] HeightMap { get; private set; }
 
@@ -46,7 +47,7 @@ namespace MinecraftClone.CoreII.Chunk
 
         public Color Color;
 
-        public ChunkOptimized(int width, int height, int depth, Vector3 translation)
+        public ChunkOptimized(Vector3 translation)
         {
             Instancing = new HardwareInstancedRenderer();
             Instancing.BindTexture(Global.GlobalShares.GlobalContent.Load<Texture2D>(@"Textures\SeamlessStone"), GlobalShares.Stone / 2);
@@ -54,15 +55,11 @@ namespace MinecraftClone.CoreII.Chunk
             Instancing.BindTexture(Global.GlobalShares.GlobalContent.Load<Texture2D>(@"Textures\DirtSmooth"), GlobalShares.Dirt / 2);
             Instancing.BindTexture(Global.GlobalShares.GlobalContent.Load<Texture2D>(@"Textures\Water"), GlobalShares.Water / 2);
 
-            Width = width;
-            Height = height;
-            Depth = depth;
-
             Translation = translation;
 
             ChunkArea = new BoundingBox(new Vector3(Translation.X -0.5f, 0, Translation.Z -.5f), new Vector3(Translation.X + Width -0.5f, Height, Translation.Z + Depth - 0.5f));
-            ChunkData = new DefaultCubeStructure[Width * Height * Depth];
-            
+            ChunkData = new DefaultCubeClass[Width * Height * Depth];
+
             IndexRenderer = new List<int>();
             IndexUpdater = new List<int>();
 
@@ -77,6 +74,8 @@ namespace MinecraftClone.CoreII.Chunk
                     HeightMap[i, j] = 133 + ChunkManager.Generator.GetNoise3D(i + (int)Translation.X, 154, j + (int)Translation.Z);
                 }
             }
+
+            ChunkManager.Progress++;
         }
 
         private void ParseSurroundingChunks()
@@ -88,18 +87,25 @@ namespace MinecraftClone.CoreII.Chunk
 
                 if (X + 1 < ChunkManager.Width)
                     SurroundingChunks[0] = ChunkManager.Chunks[(X + 1) + Y * ChunkManager.Width];
-
                 if (X - 1 >= 0)
                     SurroundingChunks[1] = ChunkManager.Chunks[(X - 1) + Y * ChunkManager.Width];
 
-
                 if (Y + 1 < ChunkManager.Depth)
                     SurroundingChunks[2] = ChunkManager.Chunks[X + (Y + 1) * ChunkManager.Width];
-
                 if (Y - 1 >= 0)
                     SurroundingChunks[3] = ChunkManager.Chunks[X + (Y - 1) * ChunkManager.Width];
 
-                SurroundingChunks[4] = this;
+                if (X + 1 < ChunkManager.Width && Y + 1 < ChunkManager.Depth)
+                    SurroundingChunks[4] = ChunkManager.Chunks[(X + 1) + (Y + 1) * ChunkManager.Width];
+                if (X + 1 < ChunkManager.Width && Y - 1 >= 0)
+                    SurroundingChunks[5] = ChunkManager.Chunks[(X + 1) + (Y - 1) * ChunkManager.Width];
+
+                if (X - 1 >= 0 && Y + 1 < ChunkManager.Depth)
+                    SurroundingChunks[6] = ChunkManager.Chunks[(X - 1) + (Y + 1) * ChunkManager.Width];
+                if (X - 1 >= 0 && Y - 1 >= 0)
+                    SurroundingChunks[7] = ChunkManager.Chunks[(X - 1) + (Y - 1) * ChunkManager.Width];
+
+                SurroundingChunks[8] = this;
 
                 Parsed = true;
 
@@ -160,7 +166,7 @@ namespace MinecraftClone.CoreII.Chunk
                             if (!SetEdge)
                             {
                                 if (y < Height && y > 0)
-                                    ChunkData[ChunkManager.Indices[x, y - 1, z]].Id = (int)Global.GlobalShares.Identification.Air;
+                                    ChunkData[ChunkManager.Indices[x, y - 1, z]] = new DefaultCubeClass((int)Global.GlobalShares.Identification.Air, Vector3.Zero, Vector3.Zero, ChunkManager.Indices[x, y - 1, z]);
                                 SetEdge = true;
                             }
                             Push(x, y, z, (int)Global.GlobalShares.Identification.Grass);
@@ -168,7 +174,7 @@ namespace MinecraftClone.CoreII.Chunk
                         else if (y == (int)HeightMap[x + (int)0, z + (int)0] - 1)
                         {
                             if(y < Height && y > 0)
-                                ChunkData[ChunkManager.Indices[x, y - 1, z]].Id = (int)Global.GlobalShares.Identification.Air;
+                                ChunkData[ChunkManager.Indices[x, y - 1, z]] = new DefaultCubeClass((int)Global.GlobalShares.Identification.Air, Vector3.Zero, Vector3.Zero, ChunkManager.Indices[x, y - 1, z]);
                             Push(x, y, z, (int)Global.GlobalShares.Identification.Stone);
                         }
                     }
@@ -185,7 +191,7 @@ namespace MinecraftClone.CoreII.Chunk
             if (y < Height)
             {
                 int Index = ChunkManager.Indices[x, y, z];
-                var Chunk = ChunkData[Index];
+                var Chunk = new DefaultCubeClass(-1, Vector3.Zero, Vector3.Zero, -1);
                 Chunk.Id = id;
 
                 Chunk.Index = Index;
@@ -201,7 +207,7 @@ namespace MinecraftClone.CoreII.Chunk
             else Push(x, y - 1, z, id);
         }
 
-        public void Push(int index, DefaultCubeStructure data)
+        public void Push(int index, DefaultCubeClass data)
         {
             ChunkData[index] = data;
         }
@@ -241,7 +247,7 @@ namespace MinecraftClone.CoreII.Chunk
 
         }
 
-        public DefaultCubeStructure Pop(int index)
+        public DefaultCubeClass Pop(int index)
         {
             var Cube = ChunkData[index];
             IndexRenderer.Remove(index);

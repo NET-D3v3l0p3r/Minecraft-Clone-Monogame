@@ -41,6 +41,8 @@ namespace MinecraftClone.Core.Camera
         public static Matrix ViewMatrix;
         public static Matrix ProjectionMatrix;
 
+        public static BoundingFrustum ViewFrustum;
+
         public static float MouseDPI { get; set; }
         public static float MovementSpeed { get; set; }
 
@@ -184,6 +186,9 @@ namespace MinecraftClone.Core.Camera
         public static void Update(GameTime gTime)
         {
             CalculateViewMatrix();
+
+            ViewFrustum = new BoundingFrustum(ViewMatrix * ProjectionMatrix);
+
             Ray = CalculateRay();
 
             if (PitchYaw != new Vector2(Pitch, Yaw))
