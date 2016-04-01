@@ -20,7 +20,7 @@ namespace MinecraftCloneMonoGame.CoreOptimized.Global
             : this()
         {
             Chunk = chunk;
-            AABB = Chunk.ChunkData[index].BoundingBox;
+            AABB = Chunk.ChunkData[index].PickingBox;
             Index = index;
             Face = face;
             Distance = distance;

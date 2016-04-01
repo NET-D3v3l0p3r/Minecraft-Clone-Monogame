@@ -24,6 +24,8 @@ namespace MinecraftClone.CoreII.Chunk.SimplexNoise
         public float FrequencyZ { get; set; }
         public float FrequencyW { get; set; }
 
+        public int Sealevel { get; set; }
+
         public float Factor { get; set; }
 
         public int Octaves
@@ -139,7 +141,7 @@ namespace MinecraftClone.CoreII.Chunk.SimplexNoise
                         frequencyX *= 2f;
                         frequencyZ *= 2f;
                     }
-                    noise[x, y] = (noise[x, y] * Factor / MaxValue);
+                    noise[x, y] = (noise[x, y] * Factor / MaxValue) + Sealevel;
                 }
             });
             return noise;

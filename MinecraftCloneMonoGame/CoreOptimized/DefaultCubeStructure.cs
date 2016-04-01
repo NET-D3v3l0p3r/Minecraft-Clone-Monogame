@@ -13,7 +13,7 @@ namespace MinecraftClone.CoreII
     //UPDATED TO CLASS
     //SIGNFICANT PERFOMANCE INCREASES
     //32x32 CHUNK-MAP ~ 512 MB!
-    public class DefaultCubeClass
+    public class DefaultCubeClass : IDisposable
     {
         public int Id { get; set; }
         public int Index { get; set; }
@@ -26,8 +26,16 @@ namespace MinecraftClone.CoreII
         public Vector2 TextureVector2;
         public float MetaData { get; set; }
 
-        public BoundingBox BoundingBox { get; set; }
+        public BoundingBox CollisionBox { get; set; }
+        public BoundingBox PickingBox { get; set; }
 
+        /// <summary>
+        /// Notice: Position = Position + WorldTranslation
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="position"></param>
+        /// <param name="translation"></param>
+        /// <param name="index"></param>
         public DefaultCubeClass(int id, Vector3 position, Vector3 translation, int index) 
         {
             Id = id;
@@ -46,7 +54,8 @@ namespace MinecraftClone.CoreII
             Transformation = Matrix.CreateScale(0.5f) * Matrix.CreateTranslation(Position + ChunkTranslation);
             //THIS LINE IS CAUSING PERFOMANCE ISSUES
             //CALCULATE BOUNDINGBOX BY OWN
-            BoundingBox = new BoundingBox(Position + ChunkTranslation - new Vector3(0.5f), Position + ChunkTranslation + new Vector3(0.5f));
+            PickingBox = new BoundingBox(Position + ChunkTranslation - new Vector3(0.5f), Position + ChunkTranslation + new Vector3(0.5f));
+            CollisionBox = new BoundingBox(Position + ChunkTranslation - new Vector3(0.6f), Position + ChunkTranslation + new Vector3(0.6f));
         }
 
         public override string ToString()
@@ -54,7 +63,9 @@ namespace MinecraftClone.CoreII
             return Enum.GetName(typeof(Global.GlobalShares.Identification), Id);
         }
 
-        
-
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+        }
     }
 }

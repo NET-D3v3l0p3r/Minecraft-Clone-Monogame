@@ -18,7 +18,7 @@ using MinecraftClone.CoreII.Global;
 
 namespace MinecraftClone.Core.Model
 {
-    public class HardwareInstancedRenderer
+    public class HardwareInstancedRenderer : IDisposable
     {
         public Vector2[] TextureBufferArray;
         public Matrix[] MatrixBufferArray;
@@ -109,11 +109,10 @@ namespace MinecraftClone.Core.Model
 
                 InstancedVertexBuffer = new DynamicVertexBuffer(GlobalShares.GlobalDevice, InstancedVertexDeclaration, MatrixBufferArray.Length, BufferUsage.WriteOnly);
                 InstancedTextureBuffer = new DynamicVertexBuffer(GlobalShares.GlobalDevice, InstancedTextureIDs, TextureBufferArray.Length, BufferUsage.WriteOnly);
+
+                InstancedVertexBuffer.SetData<Matrix>(MatrixBufferArray, 0, MatrixBufferArray.Length, SetDataOptions.Discard);
+                InstancedTextureBuffer.SetData<Vector2>(TextureBufferArray, 0, TextureBufferArray.Length, SetDataOptions.Discard);
             }
-
-
-            InstancedVertexBuffer.SetData<Matrix>(MatrixBufferArray, 0, MatrixBufferArray.Length, SetDataOptions.Discard);
-            InstancedTextureBuffer.SetData<Vector2>(TextureBufferArray, 0, TextureBufferArray.Length, SetDataOptions.Discard);
 
             for (int i = 0; i < Texture2Ds.Length; i++)
             {
@@ -125,11 +124,10 @@ namespace MinecraftClone.Core.Model
             {
                 foreach (var meshPart in mesh.MeshParts)
                 {
-
                     GlobalShares.GlobalDevice.SetVertexBuffers(
-                            new VertexBufferBinding(meshPart.VertexBuffer, 0, 0),
-                            new VertexBufferBinding(InstancedVertexBuffer, 0, 1),
-                            new VertexBufferBinding(InstancedTextureBuffer, 0, 1));
+                    new VertexBufferBinding(meshPart.VertexBuffer, 0, 0),
+                    new VertexBufferBinding(InstancedVertexBuffer, 0, 1),
+                    new VertexBufferBinding(InstancedTextureBuffer, 0, 1));
 
                     GlobalShares.GlobalDevice.Indices = meshPart.IndexBuffer;
 
@@ -156,8 +154,28 @@ namespace MinecraftClone.Core.Model
             }
 
             return true;
+        }
 
+        public void Dispose()
+        {
+            TextureBuffer.Clear();
+            TextureBuffer = null;
+            MatrixBuffer.Clear();
+            MatrixBuffer = null;
 
+            TextureBufferArray = new Vector2[0];
+            MatrixBufferArray = new Matrix[0];
+
+            Texture2Ds = new Texture2D[0];
+
+            if (InstancedVertexBuffer != null)
+                InstancedVertexBuffer.Dispose();
+            if (InstancedTextureBuffer != null)
+                InstancedTextureBuffer.Dispose();
+
+            //InstancingShader.Dispose();
+
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -19,7 +19,6 @@ namespace MinecraftClone.Core.Camera
         public static MinecraftCloneGame Game { get; set; }
         public static int RenderDistance { get; set; }
 
-        private static float Acceleration;
         private static float oldX, oldY;
         private static Vector3 ReferenceVector3 = new Vector3(0, 0, -1);
         private static Vector3 Position;
@@ -40,15 +39,12 @@ namespace MinecraftClone.Core.Camera
 
         public static Matrix ViewMatrix;
         public static Matrix ProjectionMatrix;
-
         public static BoundingFrustum ViewFrustum;
 
         public static float MouseDPI { get; set; }
         public static float MovementSpeed { get; set; }
 
-        //TEST
-        public static bool GravitationActive = true;
-        private static int Height;
+        public static int CurrentHeight = 0;
         public enum Quarter
         {
             North,
@@ -72,7 +68,9 @@ namespace MinecraftClone.Core.Camera
 
             RenderDistance = ChunkManager.Width * 16;
             CameraPosition = new Vector3(0, 200, 0);
-            ProjectionMatrix = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4,  GlobalShares.GlobalDevice.Viewport.AspectRatio, 1, RenderDistance);
+            ProjectionMatrix = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4,  GlobalShares.GlobalDevice.Viewport.AspectRatio, 0.1f, RenderDistance);
+
+    
 
         }
         private static void CalculateViewMatrix()
@@ -82,6 +80,7 @@ namespace MinecraftClone.Core.Camera
 
             Pitch += -MouseDPI * dY;
             Yaw += -MouseDPI * dX;
+
 
             Pitch = MathHelper.Clamp(Pitch, -1.5f, 1.5f);
 
@@ -156,30 +155,44 @@ namespace MinecraftClone.Core.Camera
 
         public static void Move(Vector3 unit)
         {
-            Matrix Rotation = Matrix.CreateRotationX(Pitch) * Matrix.CreateRotationY(Yaw);
+            Matrix Rotation =  Matrix.CreateRotationX(Pitch) * Matrix.CreateRotationY(Yaw)  ;
             Vector3 TransformedVector = Vector3.Transform(unit, Rotation);
             TransformedVector *= MovementSpeed;
 
             if (!IsColliding(new Vector3(CameraPosition.X + TransformedVector.X, CameraPosition.Y, CameraPosition.Z)))
                 CameraPosition.X += TransformedVector.X;
-            if (!IsColliding(new Vector3(CameraPosition.X, CameraPosition.Y, CameraPosition.Z + TransformedVector.Z)))
+            if (!IsColliding(new Vector3(CameraPosition.X, CameraPosition.Y, CameraPosition.Z + TransformedVector.Z  )))
                 CameraPosition.Z += TransformedVector.Z;
-            if (!IsColliding(new Vector3(CameraPosition.X, CameraPosition.Y + TransformedVector.Y, CameraPosition.Z)))
-                CameraPosition.Y += TransformedVector.Y; 
+            if (!IsColliding(new Vector3(CameraPosition.X, CameraPosition.Y + TransformedVector.Y , CameraPosition.Z)))
+                CameraPosition.Y += TransformedVector.Y;
+            ChunkManager.GetChunkArea(CameraPosition);
+
         }
+
 
         private static bool IsColliding(Vector3 to)
         {
-            var Chunk = Game.ChunkManager.GetChunkArea(Camera3D.CameraPosition);
-            if (Chunk != null)
-                for (int i = 0; i < Chunk.IndexRenderer.Count; i++)
+            if (ChunkManager.CurrentChunk != null)
+            {
+                foreach (var Surroundings in ChunkManager.CurrentChunk.SurroundingChunks)
                 {
-                    var Object = Chunk.ChunkData[Chunk.IndexRenderer[i]];
-                    var BoundingBox = Object.BoundingBox;
+                    if (Surroundings != null && Surroundings.IndexRenderer != null)
+                        for (int i = 0; i < Surroundings.IndexRenderer.Count; i++)
+                        {
+                            var Object = Surroundings.ChunkData[Surroundings.IndexRenderer[i]];
+                            var BoundingBox = Object.CollisionBox;
 
-                    if (BoundingBox.Contains(to) == ContainmentType.Contains)
-                        return true;
+                            if (BoundingBox.Contains(to) == ContainmentType.Contains)
+                                return true;
+                        }
                 }
+
+                int X = (int)CameraPosition.X - (int)((CameraPosition.X / ChunkOptimized.Width) ) * 16;
+                int Y = (int)CameraPosition.Z - (int)((CameraPosition.Z / ChunkOptimized.Depth) ) * 16;
+
+                //CurrentHeight = (int)ChunkManager.CurrentChunk.HeightMap[X, Y];
+
+            }
             return false;
         }
 
@@ -202,6 +215,9 @@ namespace MinecraftClone.Core.Camera
             else isMoving = false;
 
             Position = CameraPosition;
+
+
+
         }
     }
 }

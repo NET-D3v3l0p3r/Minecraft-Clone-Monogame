@@ -4,7 +4,7 @@
 	#define PS_SHADERMODEL ps_3_0
 #else
 	#define VS_SHADERMODEL vs_4_0_level_9_3
-	#define PS_SHADERMODEL ps_4_0
+	#define PS_SHADERMODEL ps_4_0_level_9_3
 #endif
 
 //-----------------------------------------------------------------------------
@@ -14,12 +14,12 @@
 // Copyright (C) Microsoft Corporation. All rights reserved.
 //-----------------------------------------------------------------------------
 
+//TODO EXTRACT TEXTURE FROM TEXTURECOORD
 
 // Camera settings.
 float4x4 World;
 float4x4 View;
 float4x4 Projection;
-
 
 // This sample uses a simple Lambert lighting model.
 float3 LightDirection = normalize(float3(-1, -1, -1));
