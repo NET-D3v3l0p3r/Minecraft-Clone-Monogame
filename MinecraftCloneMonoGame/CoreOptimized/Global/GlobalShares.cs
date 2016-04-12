@@ -27,8 +27,7 @@ namespace MinecraftClone.CoreII.Global
             GoldOre = 5,
             IronOre = 6,
             Water = 8,
-            Air = -1,
-            Corner
+            Air = -1
         };
 
         public enum Face

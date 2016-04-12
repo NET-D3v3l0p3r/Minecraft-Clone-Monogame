@@ -1,29 +1,24 @@
 ﻿using Core.MapGenerator;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using MinecraftClone.Core.Camera;
-using MinecraftClone.Core.Misc;
 using MinecraftClone.Core.Model;
-using MinecraftClone.CoreII.Models;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
-using Earlz.BareMetal;
+using MinecraftCloneMonoGame.CoreObsolete.Misc;
 namespace MinecraftClone.CoreII.Chunk
 {
     /*
      * TODO: Generate chunk as model*/
-    public sealed class ChunkOptimized :IDisposable
+    public sealed class ChunkOptimized : IDisposable
     {
         private static int GeneratedChunks;
         private HardwareInstancedRenderer Instancing;
+        private int ChunkDataCounter = 0;
+
         public ChunkOptimized[] SurroundingChunks = new ChunkOptimized[9];
 
-        public string Id { get; private set; }
+        public ushort Index { get; private set; }
 
         public static int Width { get; set; }
         public static int Height { get; set; }
@@ -32,8 +27,7 @@ namespace MinecraftClone.CoreII.Chunk
         public static Vector3 WorldTranslation { get; set; }
         public Vector3 ChunkTranslation { get; set; }
 
-        public DefaultCubeClass[] ChunkData { get; private set; }
-
+        public DefaultCubeClass[] ChunkData { get; private set; } // INSTEAD OF CLASS USE PRIMITIVES
         public float[,] HeightMap { get; private set; }
 
         public List<int> IndexRenderer { get; private set; }
@@ -45,7 +39,7 @@ namespace MinecraftClone.CoreII.Chunk
         public bool Invalidate { get; set; }
         public BoundingBox ChunkArea { get; set; }
 
-        public ChunkOptimized(Vector3 translation)
+        public ChunkOptimized(Vector3 translation, ushort index)
         {
             Instancing = new HardwareInstancedRenderer();
             Instancing.BindTexture(Global.GlobalShares.GlobalContent.Load<Texture2D>(@"Textures\SeamlessStone"), GlobalShares.Stone / 2);
@@ -53,10 +47,12 @@ namespace MinecraftClone.CoreII.Chunk
             Instancing.BindTexture(Global.GlobalShares.GlobalContent.Load<Texture2D>(@"Textures\DirtSmooth"), GlobalShares.Dirt / 2);
             Instancing.BindTexture(Global.GlobalShares.GlobalContent.Load<Texture2D>(@"Textures\Water"), GlobalShares.Water / 2);
 
+            Index = index;
             ChunkTranslation = translation;
 
 
-            ChunkArea = new BoundingBox(new Vector3(ChunkTranslation.X + WorldTranslation.X -0.5f, 0, ChunkTranslation.Z + WorldTranslation.Z -.5f), new Vector3(ChunkTranslation.X + WorldTranslation.X + Width -0.5f, Height * 2, ChunkTranslation.Z + WorldTranslation.Z + Depth - 0.5f));
+            ChunkArea = new BoundingBox(new Vector3(ChunkTranslation.X + WorldTranslation.X - 0.5f, 0, ChunkTranslation.Z + WorldTranslation.Z - .5f), new Vector3(ChunkTranslation.X + WorldTranslation.X + Width - 0.5f, Height * 2, ChunkTranslation.Z + WorldTranslation.Z + Depth - 0.5f));
+
             ChunkData = new DefaultCubeClass[Width * Height * Depth];
 
             IndexRenderer = new List<int>();
@@ -64,16 +60,17 @@ namespace MinecraftClone.CoreII.Chunk
 
             UpdatingBufferSize = 512;
 
-            HeightMap = ChunkManager.Generator.GetNoiseMap2D((int)ChunkTranslation.X + (int)WorldTranslation.X, (int)ChunkTranslation.Z + (int)WorldTranslation.Z, Width, Depth);
+            HeightMap = ChunkManager.
+                TerrainGeneratorSimplex.GetNoiseMap2D(
+                (int)ChunkTranslation.X + (int)WorldTranslation.X, 
+                (int)ChunkTranslation.Z + (int)WorldTranslation.Z, 
+                Width, Depth);
 
             ChunkManager.Progress++;
         }
 
         public void ParseSurroundingChunks()
         {
-
-            SurroundingChunks = new ChunkOptimized[9];
-
             int X = (int)ChunkTranslation.X / (int)Width;
             int Y = (int)ChunkTranslation.Z / (int)Depth;
 
@@ -111,68 +108,60 @@ namespace MinecraftClone.CoreII.Chunk
             int up = 0;
             int down = 0;
 
-            int X = (int)ChunkTranslation.X;
-            int Z = (int)ChunkTranslation.Z;
+            int UnusedIndexCounter = 0;
 
             for (int x = 0; x < Width; x++)
             {
                 for (int z = 0; z < Depth; z++)
                 {
-                    if (HeightMap[x + (int)0, z + (int)0] < 1)
-                        Push(x, 0, z, (int)Global.GlobalShares.Identification.Water);
-                    else
+                    if (HeightMap[x + (int)0, z + (int)0] < ChunkManager.SeaLevel + 1)
+                        Push(x, ChunkManager.SeaLevel, z, (int)Global.GlobalShares.Identification.Water);
+
+                    if (HeightMap[x, z] <= 1)
+                        Push(x, 0, z, (int)Global.GlobalShares.Identification.Grass);
+
+                    if ((x - 1) + (int)0 >= 0)
+                        left =
+                           (int)HeightMap[(x - 1) + (int)0, z + (int)0];
+                    else if (SurroundingChunks[1] == null) left =
+                           Height + 1;
+                    else left = (int)SurroundingChunks[1].HeightMap[Width - 1, z];
+
+                    if ((x + 1) + (int)0 < Width + (int)0)
+                        right =
+                           (int)HeightMap[(x + 1) + (int)0, z + (int)0];
+                    else if (SurroundingChunks[0] == null) right =
+                           Height + 1;
+                    else right = (int)SurroundingChunks[0].HeightMap[0, z];
+
+                    if ((z - 1) + (int)0 >= 0)
+                        up =
+                           (int)HeightMap[x + (int)0, (z - 1) + (int)0];
+                    else if (SurroundingChunks[3] == null) up =
+                           Height + 1;
+                    else up = (int)SurroundingChunks[3].HeightMap[x, Depth - 1];
+
+                    if ((z + 1) + (int)0 < Depth + (int)0)
+                        down =
+                           (int)HeightMap[x + (int)0, (z + 1) + (int)0];
+                    else if (SurroundingChunks[2] == null) down =
+                           Height + 1;
+                    else down = (int)SurroundingChunks[2].HeightMap[x, 0];
+
+                    for (int y = 0; y < HeightMap[x + (int)0, z + (int)0]; y++)
                     {
-                        if ((x - 1) + (int)0 > 0)
-                            left =
-                               (int)HeightMap[(x - 1) + (int)0, z + (int)0];
-                        else if (SurroundingChunks[1] == null) left =
-                                  Height + 1;
-                        else left = (int)SurroundingChunks[1].HeightMap[Width - 1, z];
+                        if ((y >= up ||
+                            y >= down ||
+                            y >= left ||
+                            y >= right) &&
+                            y <= HeightMap[x + (int)0, z + (int)0] - 1)
 
-                        if ((x + 1) + (int)0 < Width + (int)0)
-                            right =
-                               (int)HeightMap[(x + 1) + (int)0, z + (int)0];
-                        else if (SurroundingChunks[0] == null) right =
-                                  Height + 1;
-                        else right = (int)SurroundingChunks[0].HeightMap[0, z];
+                            if (y == (int)HeightMap[x + (int)0, z + (int)0] - 1)
+                                Push(x, y, z, (int)Global.GlobalShares.Identification.Grass);
+                            else Push(x, y, z, (int)Global.GlobalShares.Identification.Dirt);
 
-                        if ((z - 1) + (int)0 > 0)
-                            up =
-                               (int)HeightMap[x + (int)0, (z - 1) + (int)0];
-                        else if (SurroundingChunks[3] == null) up =
-                               Height + 1;
-                        else up = (int)SurroundingChunks[3].HeightMap[x, Depth - 1];
-
-                        if ((z + 1) + (int)0 < Depth + (int)0)
-                            down =
-                               (int)HeightMap[x + (int)0, (z + 1) + (int)0];
-                        else if (SurroundingChunks[2] == null) down =
-                                        Height + 1;
-                        else down = (int)SurroundingChunks[2].HeightMap[x, 0];
-
-                        bool SetEdge = false;
-
-                        for (int y = 0; y < HeightMap[x + (int)0, z + (int)0]; y++)
-                        {
-                            if ((y >= up || y >= down || y >= left || y >= right) && y <= HeightMap[x + (int)0, z + (int)0] - 1)
-                            {
-                                if (!SetEdge)
-                                {
-                                    if (y < Height && y > 0)
-                                        ChunkData[ChunkManager.Indices[x, y - 1, z]] = new DefaultCubeClass((int)Global.GlobalShares.Identification.Air, Vector3.Zero, Vector3.Zero, ChunkManager.Indices[x, y - 1, z]);
-                                    SetEdge = true;
-                                }
-                                if (y == (int)HeightMap[x + (int)0, z + (int)0] - 1)
-                                    Push(x, y, z, (int)Global.GlobalShares.Identification.Grass);
-                                else Push(x, y, z, (int)Global.GlobalShares.Identification.Dirt);
-                            }
-                            else if (y == (int)HeightMap[x + (int)0, z + (int)0] - 1)
-                            {
-                                if (y < Height && y > 0)
-                                    ChunkData[ChunkManager.Indices[x, y - 1, z]] = new DefaultCubeClass((int)Global.GlobalShares.Identification.Air, Vector3.Zero, Vector3.Zero, ChunkManager.Indices[x, y - 1, z]);
-                                Push(x, y, z, (int)Global.GlobalShares.Identification.Stone);
-                            }
-                        }
+                        else if (y == (int)HeightMap[x + (int)0, z + (int)0] - 1)
+                            Push(x, y, z, (int)Global.GlobalShares.Identification.Stone);
                     }
                 }
             }
@@ -181,30 +170,32 @@ namespace MinecraftClone.CoreII.Chunk
             else ChunkManager.Generated = false;
             Invalidate = true;
         }
-
-        private void Push(int x, int y, int z, int id)
+        private void Push(int x, int y, int z, short id)
         {
             if (y < Height)
             {
-                int Index = ChunkManager.Indices[x, y, z];
-                var Chunk = new DefaultCubeClass(-1, Vector3.Zero, Vector3.Zero, -1);
+                var Chunk = new DefaultCubeClass(-1, Vector3.Zero, Vector3.Zero, new Vector3(0, 0, 0), 0, Index);
                 Chunk.Id = id;
-
-                Chunk.Index = Index;
-                Chunk.Position = new Microsoft.Xna.Framework.Vector3(x, y, z) + WorldTranslation;
+                Chunk.Index = (int)((z * ChunkOptimized.Width * ChunkOptimized.Height) + ((y) * ChunkOptimized.Depth) + x);
+                Chunk.IndexPosition = new Vector3(x, y, z);
+                Chunk.Position = new Vector3(x, y, z) + WorldTranslation;
                 Chunk.ChunkTranslation = ChunkTranslation;
                 Chunk.Initialize();
+                if (ChunkData[Chunk.Index] != null)
+                    ChunkData[Chunk.Index].Dispose();
+                Push((int)((z * ChunkOptimized.Width * ChunkOptimized.Height) + ((y) * ChunkOptimized.Depth) + x), Chunk, x,y,z);
 
-                Push(Index, Chunk);
-
-                UploadIndexRenderer(Index);
+                UploadIndexRenderer((z * ChunkOptimized.Width * ChunkOptimized.Height) + ((y) * ChunkOptimized.Depth) + x);
                 ChunkManager.MaximumRender++;
             }
             else Push(x, y - 1, z, id);
         }
 
-        public void Push(int index, DefaultCubeClass data)
+        public void Push(int index, DefaultCubeClass data, int x, int y, int z)
         {
+            int X = x;
+            int Y = y;
+            int Z = z;
             ChunkData[index] = data;
         }
 
@@ -243,75 +234,126 @@ namespace MinecraftClone.CoreII.Chunk
 
         }
 
-        public DefaultCubeClass Pop(int index)
+        public void Pop(int index)
         {
-            var Cube = ChunkData[index];
+            var int3 = ChunkData[index].IndexPosition;
+
+            int X = (int)int3.X;
+            int Y = (int)int3.Y;
+            int Z = (int)int3.Z;
+
+            int HeightForward = 0;
+            int HeightBackward = 0;
+            int HeightLeft = 0;
+            int HeightRight = 0;
+
+            int HeightUp = 0;
+            int HeightDown = 0;
+
+            int HeightMid = 0;
+
+            //1: left
+            //2: forward
+            //3: backward
+            //0: right
+
+            /*
+             * RULE:
+             * if y + v < height && y + v == null || y + v != null && y + v = air
+             */
+
+            if (X + 1 < Width)
+                HeightRight = (int)HeightMap[X + 1, Z];
+            else HeightRight = (int)SurroundingChunks[0].HeightMap[0, Z];
+
+            if (X - 1 >= 0)
+                HeightLeft = (int)HeightMap[X - 1, Z];
+            else HeightLeft = (int)SurroundingChunks[1].HeightMap[Width - 1, Z];
+
+            if (Z + 1 < Depth)
+                HeightForward = (int)HeightMap[X, Z + 1];
+            else HeightForward = (int)SurroundingChunks[2].HeightMap[X, 0];
+
+            if (Z - 1 >= 0)
+                HeightBackward = (int)HeightMap[X, Z - 1];
+            else HeightBackward = (int)SurroundingChunks[3].HeightMap[X, Depth - 1];
+
+            if (Y + 1 < Height)
+                HeightUp = Y + 1;
+            else HeightUp = Height - 1;
+
+            if (Y - 1 >= 0)
+                HeightDown = Y - 1;
+            else HeightDown = 0;
+
+            HeightMid = (int)HeightMap[X, Z];
+
+            if (ChunkData[(Z * ChunkOptimized.Width * ChunkOptimized.Height) + ((HeightDown) * ChunkOptimized.Depth) + X] == null)
+                Push(X, HeightDown, Z, (int)Global.GlobalShares.Identification.Grass);
+
+            if (ChunkData[(Z * ChunkOptimized.Width * ChunkOptimized.Height) + ((HeightUp) * ChunkOptimized.Depth) + X] == null && HeightUp < HeightMid - 1)
+                Push(X, HeightUp, Z, (int)Global.GlobalShares.Identification.Grass);
+
+
+            if (Z + 1 < Depth &&
+               (ChunkData[((Z + 1) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X] == null ||
+                ChunkData[((Z + 1) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X] != null &&
+                ChunkData[((Z + 1) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X].Id != -1)
+                && Y < HeightForward - 1)
+                Push(X, Y, Z + 1, (int)Global.GlobalShares.Identification.Grass);
+
+            if (Z - 1 >= 0 &&
+               (ChunkData[((Z - 1) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X] == null ||
+                ChunkData[((Z - 1) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X] != null &&
+                ChunkData[((Z - 1) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X].Id != -1)
+                && Y < HeightBackward - 1)
+                Push(X, Y, Z - 1, (int)Global.GlobalShares.Identification.Grass);
+
+
+            if (X + 1 < Width &&
+               (ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + (X + 1)] == null ||
+                ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + (X + 1)] != null &&
+                ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + (X + 1)].Id != -1)
+                && Y < HeightRight - 1)
+                Push(X + 1, Y, Z, (int)Global.GlobalShares.Identification.Grass);
+
+            if (X - 1 >= 0 &&
+               (ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + (X - 1)] == null ||
+                ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + (X - 1)] != null &&
+                ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + (X - 1)].Id != -1)
+                && Y < HeightLeft - 1)
+                Push(X - 1, Y, Z, (int)Global.GlobalShares.Identification.Grass);
+
+
+            ChunkData[index].Dispose();
             IndexRenderer.Remove(index);
-            Cube.Id = (int)Global.GlobalShares.Identification.Air;
-            Push(index, Cube);
-
-            //TODO: GENERATE NEW CUBES 
-
             FlushChunk();
-            return Cube;
         }
 
         public void FlushChunk()
         {
             if (!this.Invalidate)
                 this.Invalidate = true;
+            
         }
 
         public void PullShaderData()
         {
+            Instancing.Invalidate = true;
             Instancing.ResizeInstancing(IndexRenderer.Count);
             int Index = 0;
             for (int i = 0; i < IndexRenderer.Count; i++)
             {
-                Instancing.TextureBufferArray[Index] = (ChunkData[IndexRenderer[i]].TextureVector2);
+                Instancing.TextureBufferArray[Index] = new Vector2(ChunkData[IndexRenderer[i]].TextureId, 0);
                 Instancing.MatrixBufferArray[Index] = (ChunkData[IndexRenderer[i]].Transformation);
                 Index++;
                 ChunkManager.TotalRender++;
             }
             ChunkManager.UploadingShaderData = true;
-            //Instancing.Apply();
         }
-
-        public void DeleteShaderData(int index)
-        {
-            Instancing.TextureBuffer.Remove(ChunkData[index].TextureVector2);
-            Instancing.MatrixBuffer.Remove(ChunkData[index].Transformation);
-            Instancing.Apply();
-        }
-
-        //public IEnumerable<int> Filter()
-        //{
-        //    for (int i = 0; i < RenderingCubes.Count; i++)
-        //    {
-        //        if (ChunkData[RenderingCubes[i]].BoundingBox.Contains(Camera3D.ViewFrustum) != ContainmentType.Disjoint)
-        //            yield return RenderingCubes[i];
-        //    }
-        //}
-
-        //public void PullShaderData()
-        //{
-        //    var Filtered = Enumerable.ToArray<int>(Filter()).AsParallel(); //AsParallel .
-        //    Instancing.ResizeInstancing(Filtered.Count());
-        //    int Index = 0;
-
-        //    foreach (var index in RenderingCubes)
-        //    {
-        //        Instancing.Transformations[Index] = ChunkData[index].Transformation;
-        //        Instancing.Textures[Index] = ChunkData[index].TextureVector2;
-        //        Index++;
-        //        ChunkManager.TotalRender++;
-        //    }
-
-        //    ChunkManager.MaximumRender += Filtered.Count();
-        //}
-
-
-
+        /// <summary>
+        /// IMPORTANT
+        /// </summary>
         public void Dispose()
         {
             if (IndexRenderer != null)

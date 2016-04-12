@@ -11,15 +11,15 @@ namespace Core.MapGenerator
 {
     public static class GlobalShares
     {
-        public const int GoldOre = 0;
-        public const int Dirt = 2;
-        public const int Stone = 4;
-        public const int Water = 6;
-        public const int Wood = 8;
-        public const int Cobble = 10;
-        public const int CoalOre = 12;
-        public const int Grass = 14;
-        public const int Sand = 16;
+        public const short GoldOre = 0;
+        public const short Dirt = 2;
+        public const short Stone = 4;
+        public const short Water = 6;
+        public const short Wood = 8;
+        public const short Cobble = 10;
+        public const short CoalOre = 12;
+        public const short Grass = 14;
+        public const short Sand = 16;
 
         //public static ICube GetNearest(ICube[] cubes, Picking picking)
         //{

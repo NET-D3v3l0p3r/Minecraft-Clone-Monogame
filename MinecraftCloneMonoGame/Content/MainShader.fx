@@ -182,7 +182,10 @@ float4 PixelShaderFunction(VertexShaderOutput input) : COLOR0
 	if (input.IndexCoord.x > 29 && input.IndexCoord.x < 31) //30
 		tex = tex2D(Sampler15, input.TextureCoordinate);
 
+	if (input.IndexCoord.x > 5 && input.IndexCoord.x < 7)
+		input.Color = float4(input.Color.rgb, 0.981f);
 	tex *= input.Color + float4(input.Specular.rgb, 0);
+
 	tex.rgb = lerp(tex.rgb, FogColor, input.Specular.w);
 
 	return tex;

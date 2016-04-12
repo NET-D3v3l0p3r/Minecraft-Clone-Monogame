@@ -13,21 +13,23 @@
     <AssemblyName>MinecraftCloneMonoGame</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <MonoGamePlatform>Windows</MonoGamePlatform>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
-    <TargetFrameworkProfile />
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>x86</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\$(MonoGamePlatform)\$(Platform)\$(Configuration)\</OutputPath>
     <DefineConstants>DEBUG;TRACE;WINDOWS</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <WarningLevel>0</WarningLevel>
     <UseVSHostingProcess>false</UseVSHostingProcess>
     <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DocumentationFile>bin\Windows\x86\Debug\MinecraftCloneMonoGame.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <PlatformTarget>x86</PlatformTarget>
@@ -54,6 +56,7 @@
     <Compile Include="CoreObsolete\MapGenerator\GlobalShares.cs" />
     <Compile Include="CoreObsolete\MapGenerator\Possiblity.cs" />
     <Compile Include="CoreObsolete\Misc\BoundingBoxRenderer.cs" />
+    <Compile Include="CoreObsolete\Misc\Int3.cs" />
     <Compile Include="CoreObsolete\Model\HardwareInstancedRenderer.cs" />
     <Compile Include="CoreObsolete\Model\ICube.cs" />
     <Compile Include="CoreObsolete\Model\Types\Air.cs" />
@@ -66,6 +69,7 @@
     <Compile Include="CoreObsolete\Picking.cs" />
     <Compile Include="CoreOptimized\Chunk\ChunkManager.cs" />
     <Compile Include="CoreOptimized\Chunk\ChunkOptimized.cs" />
+    <Compile Include="CoreOptimized\Chunk\DiamondSquare\DiamondSquare.cs" />
     <Compile Include="CoreOptimized\Chunk\SimplexNoise\INoise.cs" />
     <Compile Include="CoreOptimized\Chunk\SimplexNoise\SimplexNoiseGenerator.cs" />
     <Compile Include="CoreOptimized\DefaultCubeStructure.cs" />
@@ -73,7 +77,6 @@
     <Compile Include="CoreOptimized\Global\Profile.cs" />
     <Compile Include="CoreOptimized\Models\Cube.cs" />
     <Compile Include="CoreOptimized\Models\GlobalModels.cs" />
-    <Compile Include="CoreOptimized\Models\ShaderData.cs" />
     <Compile Include="CoreOptimized\Profiler\FpsCounter.cs" />
     <Compile Include="MinecraftCloneGame.cs" />
     <Compile Include="Program.cs" />
@@ -88,6 +91,8 @@
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\MonoGame\v3.0\Assemblies\Windows\MonoGame.Framework.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>

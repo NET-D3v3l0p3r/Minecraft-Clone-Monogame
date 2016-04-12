@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 using MinecraftClone.Core.Misc;
 using MinecraftClone.CoreII.Models;
 using System.Runtime.InteropServices;
+using MinecraftCloneMonoGame.CoreObsolete.Misc;
 namespace MinecraftClone.CoreII
 {
     //UPDATED TO CLASS
@@ -15,16 +16,21 @@ namespace MinecraftClone.CoreII
     //32x32 CHUNK-MAP ~ 512 MB!
     public class DefaultCubeClass : IDisposable
     {
-        public int Id { get; set; }
-        public int Index { get; set; }
-        public Action<DefaultCubeClass> Task { get; set; }
+        public int Owner;
 
-        public Vector3 Position { get; set; }
-        public Vector3 ChunkTranslation { get; set; }
-        public Matrix Transformation { get; set; }
+        public short Id;
+        public int Index;
+        public Action<DefaultCubeClass> Task;
 
-        public Vector2 TextureVector2;
-        public float MetaData { get; set; }
+        public Vector3 Position;
+        public Vector3 ChunkTranslation;
+
+        public Vector3 IndexPosition;
+
+        public Matrix Transformation;
+
+        public short TextureId;
+        public float MetaData;
 
         public BoundingBox CollisionBox { get; set; }
         public BoundingBox PickingBox { get; set; }
@@ -36,12 +42,14 @@ namespace MinecraftClone.CoreII
         /// <param name="position"></param>
         /// <param name="translation"></param>
         /// <param name="index"></param>
-        public DefaultCubeClass(int id, Vector3 position, Vector3 translation, int index) 
+        public DefaultCubeClass(short id, Vector3 position, Vector3 translation, Vector3 index_pos, int index, int owner) 
         {
             Id = id;
+            Owner = owner;
             Index = index;
             Position = position;
             ChunkTranslation = translation;
+            IndexPosition = index_pos;
 
             Initialize();
         }
@@ -50,7 +58,7 @@ namespace MinecraftClone.CoreII
         public void Initialize()
         {
 
-            GlobalModels.IndexTextureTuple.TryGetValue(Id, out TextureVector2);
+            GlobalModels.IndexTextureTuple.TryGetValue(Id, out TextureId);
             Transformation = Matrix.CreateScale(0.5f) * Matrix.CreateTranslation(Position + ChunkTranslation);
             //THIS LINE IS CAUSING PERFOMANCE ISSUES
             //CALCULATE BOUNDINGBOX BY OWN
@@ -65,7 +73,17 @@ namespace MinecraftClone.CoreII
 
         public void Dispose()
         {
+            Id = -1;
+            Task = null;
+            Position = Vector3.Zero;
+            ChunkTranslation = Vector3.Zero;
+            Transformation = Matrix.Identity;
+            TextureId = -1;
+            MetaData = -1;
+            PickingBox = new BoundingBox();
+            CollisionBox = new BoundingBox();
             GC.SuppressFinalize(this);
+            
         }
     }
 }

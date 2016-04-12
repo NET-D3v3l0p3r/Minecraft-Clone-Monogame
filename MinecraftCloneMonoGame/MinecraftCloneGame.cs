@@ -29,24 +29,30 @@ namespace MinecraftClone
     /// </summary>
     public class MinecraftCloneGame : Microsoft.Xna.Framework.Game
     {
-        GraphicsDeviceManager graphics;
+        GraphicsDeviceManager _GraphicsDeviceManager;
         SpriteBatch spriteBatch;
 
-        public ChunkManager ChunkManager;
-        Input InputManager;
+        ChunkManager _ChunkManager;
+        Input _InputManager;
 
-        Camera3D Camera;
+        Camera3D _Camera;
 
-        bool RenderDebug;
-        Texture2D Crosshair;
-        SpriteFont DebugFont;
+        bool _RenderDebug;
+        Texture2D _Crosshair;
+        SpriteFont _DebugFont;
 
-        private FpsCounter FpsCounter;
-        private Profile? Profile;
+        FpsCounter _FpsCounter;
+        Profile? _Profile;
+
+        bool _StartGame;
+
+        //Test
+        RenderTarget2D _RenderTarget;
+        Effect _Blur;
 
         public MinecraftCloneGame()
         {
-            graphics = new GraphicsDeviceManager(this);
+            _GraphicsDeviceManager = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
         }
 
@@ -61,10 +67,10 @@ namespace MinecraftClone
             // TODO: Add your initialization logic here
             //MONOGAME BUG
             this.IsFixedTimeStep = false;
-            graphics.SynchronizeWithVerticalRetrace = true;
-            graphics.PreferredBackBufferWidth = 1080;
-            graphics.PreferredBackBufferHeight = 720;
-            graphics.ApplyChanges();
+            _GraphicsDeviceManager.SynchronizeWithVerticalRetrace = true;
+            _GraphicsDeviceManager.PreferredBackBufferWidth = 1920;
+            _GraphicsDeviceManager.PreferredBackBufferHeight = 1080;
+            _GraphicsDeviceManager.ApplyChanges();
 
             
             base.Initialize();
@@ -78,20 +84,23 @@ namespace MinecraftClone
 
             CoreII.Global.GlobalShares.GlobalContent = Content;
             CoreII.Global.GlobalShares.GlobalDevice = GraphicsDevice;
-            CoreII.Global.GlobalShares.GlobalDeviceManager = graphics;
+            CoreII.Global.GlobalShares.GlobalDeviceManager = _GraphicsDeviceManager;
 
-            ChunkManager = new ChunkManager();
+            _ChunkManager = new ChunkManager();
+
+            ChunkManager.Algorithm = ChunkManager.GeneratorAlgorithm.SimplexNoise;
             ChunkManager.Width = 32;
             ChunkManager.Depth = 32;
 
             Camera3D.Game = this;
 
-            Camera = new Camera3D(0.0035f, 0.35f);
+            _Camera = new Camera3D(0.0035f, 1.3f);
 
             ChunkOptimized.Width = ChunkOptimized.Depth = 16;
             ChunkOptimized.Height = 256;
-            ChunkOptimized.RenderingBufferSize = 2048;
+            ChunkOptimized.RenderingBufferSize = 4096;
 
+            _Blur = Content.Load<Effect>(@"PostProcessing\PostProcessingEffect");
 
             float ReservedMB = (((BareMetal.SizeOf<DefaultCubeClass>() * (ChunkOptimized.Width * ChunkOptimized.Height * ChunkOptimized.Depth)) / 1024f) / 1024f);
 
@@ -99,51 +108,146 @@ namespace MinecraftClone
                               "FOR DEFAULTCUBESTRUCTURE::");
             Console.WriteLine("::IN TOTAL: " + ReservedMB * (ChunkManager.Width * ChunkManager.Depth) + " MB!");
 
-            ChunkManager.Start(133, GlobalShares.GetRandomWord(15));
-
-            InputManager = new Input();
-            FpsCounter = new CoreII.Profiler.FpsCounter();
+            _InputManager = new Input();
+            _FpsCounter = new CoreII.Profiler.FpsCounter();
 
 
             Camera3D.CameraPosition = new Vector3((ChunkManager.Width / 2) * 16, 200, (ChunkManager.Depth / 2) * 16);
-            Crosshair = Content.Load<Texture2D>(@"Textures\cross_cross");
-            DebugFont = Content.Load<SpriteFont>(@"DebugFont");
+            _Crosshair = Content.Load<Texture2D>(@"Textures\cross_cross");
+            _DebugFont = Content.Load<SpriteFont>(@"DebugFont");
+
+            _RenderTarget = new RenderTarget2D(
+                            GraphicsDevice,
+                            GraphicsDevice.PresentationParameters.BackBufferWidth,
+                            GraphicsDevice.PresentationParameters.BackBufferHeight,
+                            false,
+                            GraphicsDevice.PresentationParameters.BackBufferFormat,
+                            DepthFormat.Depth24);
 
             for (int i = 0; i < 16; i++)
             {
                 GraphicsDevice.SamplerStates[i] = SamplerState.PointWrap;
             }
 
-            InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.F11, new Action(() => { }), new Action(() => { RenderDebug = !RenderDebug; }), true));
+            _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.F11, new Action(() => { }), new Action(() => { _RenderDebug = !_RenderDebug; }), true));
 
-            InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.S, new Action(() => { }), new Action(() =>
+            _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.S, new Action(() => { }), new Action(() =>
             {
                 Camera3D.Move(new Vector3(0, 0, 1));
 
             }), false));
-            InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.W, new Action(() => { }), new Action(() =>
+            _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.W, new Action(() => { }), new Action(() =>
             {
                 Camera3D.Move(new Vector3(0, 0, -1));
             })
                 , false));
-            InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.D, new Action(() => { }), new Action(() =>
+            _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.D, new Action(() => { }), new Action(() =>
             {
                 Camera3D.Move(new Vector3(1, 0, 0));
             })
                 , false));
-            InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.A, new Action(() => { }), new Action(() =>
+            _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.A, new Action(() => { }), new Action(() =>
             {
                 Camera3D.Move(new Vector3(-1, 0, 0));
             })
                 , false));
 
-            InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.Escape, new Action(() => { }), new Action(() => { Exit(); }), true));
-            InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.F5, new Action(() => { }), new Action(() =>
+            _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.Escape, new Action(() => { }), new Action(() => { Exit(); }), true));
+            _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.F5, new Action(() => { }), new Action(() =>
             {
                 ChunkManager.Generated = false;
-                ChunkManager.RunGeneration(GlobalShares.GetRandomWord(15).GetHashCode());
+                _ChunkManager.RunGeneration();
 
             }), true));
+
+
+            //GUI
+            this.IsMouseVisible = true;
+            var frm = (System.Windows.Forms.Form)System.Windows.Forms.Control.FromHandle(this.Window.Handle);
+            frm.Focus();
+            frm.KeyDown += new System.Windows.Forms.KeyEventHandler((object sender, System.Windows.Forms.KeyEventArgs e) =>
+            {
+                if (e.KeyCode == System.Windows.Forms.Keys.Escape)
+                    this.Exit();
+            });
+
+            frm.Location = new System.Drawing.Point(0, 0);
+            frm.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+            //frm.TopMost = true;
+            frm.WindowState = System.Windows.Forms.FormWindowState.Maximized;
+
+            System.Windows.Forms.TextBox _SeedTB = new System.Windows.Forms.TextBox();
+            _SeedTB.Font = new System.Drawing.Font("Serial", 11);
+            _SeedTB.Multiline = true;
+            _SeedTB.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            _SeedTB.BackColor = System.Drawing.Color.SlateGray;
+            _SeedTB.Size = new System.Drawing.Size(150, 25);
+            _SeedTB.Location = new System.Drawing.Point(MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferWidth / 2 - 60,
+                MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferHeight / 2);
+            _SeedTB.KeyDown += new System.Windows.Forms.KeyEventHandler((object sender, System.Windows.Forms.KeyEventArgs e) =>
+            {
+                if (e.KeyCode == System.Windows.Forms.Keys.Enter)
+                {
+                    _ChunkManager.Start(99, _SeedTB.Text);
+                    _ChunkManager.RunGeneration();
+                    frm.Controls.Clear();
+                    _StartGame = true;
+                    IsMouseVisible = false;
+                    e.SuppressKeyPress = true;
+                }
+            });
+            frm.Controls.Add(_SeedTB);
+
+            System.Windows.Forms.Label _SeedDescrp = new System.Windows.Forms.Label();
+            _SeedDescrp.Font = new System.Drawing.Font("Serial", 11);
+            _SeedDescrp.Size = new System.Drawing.Size(45, 22);
+            _SeedDescrp.BackColor = System.Drawing.Color.CornflowerBlue;
+            _SeedDescrp.Location = new System.Drawing.Point(MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferWidth / 2 - 90 - 15,
+                MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferHeight / 2 + 2);
+            _SeedDescrp.Text = "Seed:";
+
+            frm.Controls.Add(_SeedDescrp);
+
+
+            System.Windows.Forms.RadioButton _GeneratorSimplexCB = new System.Windows.Forms.RadioButton();
+            _GeneratorSimplexCB.Size = new System.Drawing.Size(130, 17);
+            _GeneratorSimplexCB.Font = new System.Drawing.Font("Serial", 11);
+            _GeneratorSimplexCB.Text = "SimplexNoise";
+            _GeneratorSimplexCB.Location = new System.Drawing.Point(MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferWidth / 2 - 55,
+                MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferHeight / 2 + 35);
+            _GeneratorSimplexCB.BackColor = System.Drawing.Color.CornflowerBlue;
+            _GeneratorSimplexCB.CheckedChanged += new EventHandler((object sender, EventArgs e) =>
+            {
+                ChunkManager.Algorithm = ChunkManager.GeneratorAlgorithm.SimplexNoise;
+            });
+            _GeneratorSimplexCB.Checked = true;
+            frm.Controls.Add(_GeneratorSimplexCB);
+
+
+            System.Windows.Forms.RadioButton _GeneratorDiamondCB = new System.Windows.Forms.RadioButton();
+            _GeneratorDiamondCB.Size = new System.Drawing.Size(140, 17);
+            _GeneratorDiamondCB.Font = new System.Drawing.Font("Serial", 11);
+            _GeneratorDiamondCB.Text = "DiamondSquare";
+            _GeneratorDiamondCB.Location = new System.Drawing.Point(MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferWidth / 2 - 55,
+                MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferHeight / 2 + 70);
+            _GeneratorDiamondCB.BackColor = System.Drawing.Color.CornflowerBlue;
+            _GeneratorDiamondCB.CheckedChanged += new EventHandler((object sender, EventArgs e) =>
+            {
+                ChunkManager.Algorithm = ChunkManager.GeneratorAlgorithm.DiamondSquare;
+            });
+            frm.Controls.Add(_GeneratorDiamondCB);
+
+
+            System.Windows.Forms.Label _GeneratorDescp = new System.Windows.Forms.Label();
+            _GeneratorDescp.Font = new System.Drawing.Font("Serial", 11);
+            _GeneratorDescp.Size = new System.Drawing.Size(75, 22);
+            _GeneratorDescp.BackColor = System.Drawing.Color.CornflowerBlue;
+            _GeneratorDescp.Location = new System.Drawing.Point(MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferWidth / 2 - 90 - 43,
+                MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferHeight / 2 + 35);
+            _GeneratorDescp.Text = "Algorithm:";
+
+            frm.Controls.Add(_GeneratorDescp);
+
 
         }
         protected override void UnloadContent()
@@ -153,26 +257,43 @@ namespace MinecraftClone
 
         protected override void Update(GameTime gameTime)
         {
-            FpsCounter.Start(gameTime);
+            if (!_StartGame)
+                return;
+            _FpsCounter.Start(gameTime);
 
             ChunkManager.PullingShaderData = ChunkManager.UploadingShaderData = false;
 
             Camera3D.Update(gameTime);
-            InputManager.Update(gameTime);
-            ChunkManager.Update(gameTime);
+            _InputManager.Update(gameTime);
+            _ChunkManager.Update(gameTime);
 
             if (Camera3D.IsChangigView || Camera3D.isMoving)
-                Profile = ChunkManager.GetFocusedCube(13.0f);
+                _Profile = _ChunkManager.GetFocusedCube(13.0f);
 
+            if (Camera3D.IsUnderWater)
+                Camera3D.MovementSpeed = 0.15f;
+            else Camera3D.MovementSpeed = 0.45f;
 
-
+            if (Mouse.GetState().LeftButton == ButtonState.Pressed)
+                if (_Profile.HasValue)
+                {
+                    _Profile.Value.Chunk.Pop((int)_Profile.Value.Index);
+                    _Profile = null;
+                }
+            _Blur.Parameters["_Value"].SetValue((float)Math.Sin(gameTime.TotalGameTime.TotalSeconds) * 0.015f);
             base.Update(gameTime);
         }
 
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+
+
+            var ClearColor = Color.CornflowerBlue;
+            if (Camera3D.IsUnderWater)
+                ClearColor = new Color(0, 162, 232, 255);
+            GraphicsDevice.SetRenderTarget(_RenderTarget);
+            GraphicsDevice.Clear(ClearColor);
 
             GraphicsDevice.BlendState = BlendState.AlphaBlend;
             GraphicsDevice.DepthStencilState = DepthStencilState.Default;
@@ -184,9 +305,33 @@ namespace MinecraftClone
             //        if (chunk != null)
             //            BoundingBoxRenderer.Render(chunk.ChunkArea, MinecraftClone.CoreII.Global.GlobalShares.GlobalDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Black);
 
+            if (!_StartGame)
+            {
+                GraphicsDevice.SetRenderTarget(null);
+                spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
+                if (Camera3D.IsUnderWater)
+                    _Blur.CurrentTechnique.Passes[0].Apply();
+                spriteBatch.Draw(_RenderTarget, new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight), Color.White);
 
-            ChunkManager.RenderChunks();
+                spriteBatch.End();
+                return;
+            }
+            if (_Profile.HasValue)
+                BoundingBoxRenderer.Render(_Profile.Value.AABB, GraphicsDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Yellow);
+
+            _ChunkManager.RenderChunks();
+            GraphicsDevice.SetRenderTarget(null);
+
+            
+            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
+            if (Camera3D.IsUnderWater)
+                _Blur.CurrentTechnique.Passes[0].Apply();
+            spriteBatch.Draw(_RenderTarget, new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight), Color.White);
+            spriteBatch.End();
+
             DrawDebug();
+
+
 
             base.Draw(gameTime);
         }
@@ -200,23 +345,19 @@ namespace MinecraftClone
 
         public void DrawDebug()
         {
-            var FPS = FpsCounter.End();
+            var FPS = _FpsCounter.End();
             spriteBatch.Begin();
 
             if (!ChunkManager.Generated)
             {
-                spriteBatch.DrawString(DebugFont, "GENERATING WORLD...: " 
-                    + (double)(ChunkManager.Progress / (ChunkManager.Width * ChunkManager.Depth)), 
+                spriteBatch.DrawString(_DebugFont, "GENERATING WORLD...: ",
                     new Vector2(MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferWidth / 2 - 90, MinecraftClone.CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferHeight / 2), Color.Black);
                 spriteBatch.End();
                 return;
             }
 
-            if (Profile.HasValue)
-                BoundingBoxRenderer.Render(Profile.Value.AABB, GraphicsDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Yellow);
-            
-            if (RenderDebug)
-                spriteBatch.DrawString(DebugFont,
+            if (_RenderDebug)
+                spriteBatch.DrawString(_DebugFont,
                     "PROGRAMMED _ BY PhiConst" + Environment.NewLine +
                     "FPS: " + FPS + Environment.NewLine +
                     "ALLOCATED_MEMORY: " + ((GC.GetTotalMemory(false)/ 1024f) / 1024f) + "MB" + Environment.NewLine +
@@ -231,16 +372,17 @@ namespace MinecraftClone
                     "PULLING_SHADER_DATA: " + ChunkManager.PullingShaderData + Environment.NewLine +
                     "UPLOAD_SHADER_DATA: " + ChunkManager.UploadingShaderData + Environment.NewLine +
                     "DATA_RECEIVED: " + ChunkManager.TotalRender + " per chunk" + Environment.NewLine +
-                    "LOOKING_AT_CUBE: " + (Profile.HasValue ?  Enum.GetName(typeof(MinecraftClone.CoreII.Global.GlobalShares.Face), Profile.Value.Face )+ "" : "FALSE") + Environment.NewLine +
+                    "LOOKING_AT_CUBE: " + (_Profile.HasValue ?  Enum.GetName(typeof(MinecraftClone.CoreII.Global.GlobalShares.Face), _Profile.Value.Face )+ "" : "FALSE") + Environment.NewLine +
                     "CURRENT_HEIGHT: " + Camera3D.CurrentHeight + Environment.NewLine +
                     "POSITION {X:" + (int)(Camera3D.CameraPosition.X / 1.0f) + " Y:" + (int)(Camera3D.CameraPosition.Y / 1.0f) + " Z:" + (int)(Camera3D.CameraPosition.Z / 1.0f) + "}" + Environment.NewLine + 
                     "MOVED_TO: "  + ChunkManager.MovedDirection + Environment.NewLine +
                     "DIRECTION(STATIONARY): " + (Camera3D.CameraDirectionStationary) + Environment.NewLine +
-                    "QUARTER:" + Camera3D.GetQuarter(Camera3D.CameraDirectionStationary) + Environment.NewLine
+                    "QUARTER:" + Camera3D.GetQuarter(Camera3D.CameraDirectionStationary) + Environment.NewLine +
+                    "UNDER_WATER: " + Camera3D.IsUnderWater
                     , new Vector2(0, 0), Color.Yellow);
 
 
-            spriteBatch.Draw(Crosshair, new Rectangle((int)(CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferWidth / 2 - 7.5), (int)(CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferHeight / 2 -  1), 15, 15), Color.DarkGray);
+            spriteBatch.Draw(_Crosshair, new Rectangle((int)(CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferWidth / 2 - 7.5), (int)(CoreII.Global.GlobalShares.GlobalDeviceManager.PreferredBackBufferHeight / 2 -  1), 15, 15), Color.DarkGray);
             spriteBatch.End();
         }
     }

@@ -23,6 +23,8 @@ namespace MinecraftClone.Core.Model
         public Vector2[] TextureBufferArray;
         public Matrix[] MatrixBufferArray;
 
+        public bool Invalidate { get; set; }
+
         public List<Vector2> TextureBuffer { get; set; }
         public List<Matrix> MatrixBuffer { get; set; }
 
@@ -98,7 +100,7 @@ namespace MinecraftClone.Core.Model
         {
             if (MatrixBufferArray.Length == 0)
                 return false;
-            if ((InstancedVertexBuffer == null) || (MatrixBufferArray.Length > InstancedVertexBuffer.VertexCount))
+            if ((InstancedVertexBuffer == null) || (MatrixBufferArray.Length > InstancedVertexBuffer.VertexCount) || Invalidate )
             {
                 if (InstancedVertexBuffer != null)
                 {
@@ -112,6 +114,7 @@ namespace MinecraftClone.Core.Model
 
                 InstancedVertexBuffer.SetData<Matrix>(MatrixBufferArray, 0, MatrixBufferArray.Length, SetDataOptions.Discard);
                 InstancedTextureBuffer.SetData<Vector2>(TextureBufferArray, 0, TextureBufferArray.Length, SetDataOptions.Discard);
+                Invalidate = false;
             }
 
             for (int i = 0; i < Texture2Ds.Length; i++)
@@ -141,14 +144,17 @@ namespace MinecraftClone.Core.Model
                     InstancingShader.Parameters["FogEnabled"].SetValue(1.0f);
                     InstancingShader.Parameters["FogColor"].SetValue(Color.CornflowerBlue.ToVector3());
                     InstancingShader.Parameters["FogStart"].SetValue(0.0f);
-                    InstancingShader.Parameters["FogEnd"].SetValue((float)Camera3D.RenderDistance);
-
-                    foreach (EffectPass pass in InstancingShader.CurrentTechnique.Passes)
+                    if (!Camera3D.IsUnderWater) //TODO
+                        InstancingShader.Parameters["FogEnd"].SetValue((float)Camera3D.RenderDistance);
+                    else
                     {
-                        pass.Apply();
-                        GlobalShares.GlobalDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 1, 0, 12, MatrixBufferArray.Length);
-
+                        InstancingShader.Parameters["FogEnd"].SetValue(55.0f);
+                        InstancingShader.Parameters["FogColor"].SetValue(new Color(0, 162, 232, 255).ToVector3());
                     }
+                    InstancingShader.CurrentTechnique.Passes[0].Apply();
+                    GlobalShares.GlobalDevice.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 1, 0, 12, MatrixBufferArray.Length);
+
+
 
                 }
             }

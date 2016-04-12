@@ -11,6 +11,6 @@ namespace MinecraftClone.CoreII.Models
     public static class GlobalModels
     {
         public static Dictionary<int, Model> IndexModelTuple = new Dictionary<int, Model>();
-        public static Dictionary<int, Vector2> IndexTextureTuple = new Dictionary<int, Vector2>();
+        public static Dictionary<int, short> IndexTextureTuple = new Dictionary<int, short>();
     }
 }

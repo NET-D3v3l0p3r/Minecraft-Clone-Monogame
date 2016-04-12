@@ -33,6 +33,7 @@ namespace MinecraftClone.Core.Camera
         public static Vector3 CameraDirectionStationary;
         public static Ray Ray { get; private set; }
 
+        public static bool IsUnderWater { get; private set; }
 
         public static float Yaw { get; private set; }
         public static float Pitch { get; private set; }
@@ -67,7 +68,7 @@ namespace MinecraftClone.Core.Camera
             MovementSpeed = Speed;
 
             RenderDistance = ChunkManager.Width * 16;
-            CameraPosition = new Vector3(0, 200, 0);
+            CameraPosition = new Vector3(0, 215, 0);
             ProjectionMatrix = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4,  GlobalShares.GlobalDevice.Viewport.AspectRatio, 0.1f, RenderDistance);
 
     
@@ -106,7 +107,7 @@ namespace MinecraftClone.Core.Camera
 
             oldX = mX;
             oldY = mY;
-
+            //Unnormalize();
 
         }
 
@@ -155,20 +156,51 @@ namespace MinecraftClone.Core.Camera
 
         public static void Move(Vector3 unit)
         {
-            Matrix Rotation =  Matrix.CreateRotationX(Pitch) * Matrix.CreateRotationY(Yaw)  ;
+            Matrix Rotation = Matrix.CreateRotationX(Pitch) * Matrix.CreateRotationY(Yaw);
             Vector3 TransformedVector = Vector3.Transform(unit, Rotation);
+
             TransformedVector *= MovementSpeed;
 
-            if (!IsColliding(new Vector3(CameraPosition.X + TransformedVector.X, CameraPosition.Y, CameraPosition.Z)))
+            bool RequestArea = false;
+
+            if (RequestArea = !IsColliding(new Vector3(CameraPosition.X + TransformedVector.X, CameraPosition.Y, CameraPosition.Z)))
                 CameraPosition.X += TransformedVector.X;
-            if (!IsColliding(new Vector3(CameraPosition.X, CameraPosition.Y, CameraPosition.Z + TransformedVector.Z  )))
+            if (RequestArea = !IsColliding(new Vector3(CameraPosition.X, CameraPosition.Y, CameraPosition.Z + TransformedVector.Z)))
                 CameraPosition.Z += TransformedVector.Z;
-            if (!IsColliding(new Vector3(CameraPosition.X, CameraPosition.Y + TransformedVector.Y , CameraPosition.Z)))
+            if (RequestArea = !IsColliding(new Vector3(CameraPosition.X, CameraPosition.Y + TransformedVector.Y, CameraPosition.Z)))
                 CameraPosition.Y += TransformedVector.Y;
-            ChunkManager.GetChunkArea(CameraPosition);
+
+            if (RequestArea)
+                ChunkManager.GetChunkArea(CameraPosition);
+
+
+            //GET CHUNK POSITION
+            int X = (int)((int)CameraPosition.X - (int)(CameraPosition.X / ChunkOptimized.Width) * 16);
+            int Y = (int)((int)CameraPosition.Z - (int)(CameraPosition.Z / ChunkOptimized.Depth) * 16);
+
+            if (X < 0)
+                X = 16 + X;
+            if (Y < 0)
+                Y = 16 + Y;
+
+            CurrentHeight = (int)ChunkManager.CurrentChunk.HeightMap[X, Y] - 1;
+
+            for (int i = (int)CameraPosition.Y + 2; i < ChunkOptimized.Height; i++)
+            {
+                var UpperCube = ChunkManager.CurrentChunk.ChunkData[(Y * ChunkOptimized.Width * ChunkOptimized.Height) + ((i) * ChunkOptimized.Depth) + X];
+
+                IsUnderWater = true;
+                if (UpperCube != null && (UpperCube.Id != (short)GlobalShares.Identification.Water && UpperCube.Id != -1)   || i == ChunkOptimized.Height - 1)
+                {
+                    IsUnderWater = false;
+                    break;
+                }
+                else if (UpperCube != null && UpperCube.Id == (short)GlobalShares.Identification.Water)
+                    break;
+            }
+
 
         }
-
 
         private static bool IsColliding(Vector3 to)
         {
@@ -182,16 +214,10 @@ namespace MinecraftClone.Core.Camera
                             var Object = Surroundings.ChunkData[Surroundings.IndexRenderer[i]];
                             var BoundingBox = Object.CollisionBox;
 
-                            if (BoundingBox.Contains(to) == ContainmentType.Contains)
+                            if (BoundingBox.Contains(to) == ContainmentType.Contains && Surroundings.ChunkData[Surroundings.IndexRenderer[i]].Id != (short)GlobalShares.Identification.Water)
                                 return true;
                         }
                 }
-
-                int X = (int)CameraPosition.X - (int)((CameraPosition.X / ChunkOptimized.Width) ) * 16;
-                int Y = (int)CameraPosition.Z - (int)((CameraPosition.Z / ChunkOptimized.Depth) ) * 16;
-
-                //CurrentHeight = (int)ChunkManager.CurrentChunk.HeightMap[X, Y];
-
             }
             return false;
         }

@@ -6,6 +6,7 @@ using MinecraftClone.Core.Misc;
 using MinecraftClone.Core.Model;
 using MinecraftClone.CoreII.Chunk.SimplexNoise;
 using MinecraftClone.CoreII.Models;
+using MinecraftCloneMonoGame.CoreOptimized.Chunk.DiamondSquare;
 using MinecraftCloneMonoGame.CoreOptimized.Global;
 using System;
 using System.Collections.Generic;
@@ -21,15 +22,15 @@ namespace MinecraftClone.CoreII.Chunk
         private static ChunkOptimized Old;
         private int ChunkIndexCounter = -1;
 
-        private static int WidthCounter, DepthCounter;
-
         public static bool Generated { get; set; }
         public static double Progress { get; set; }
 
         public static bool UploadingShaderData { get; set; }
         public static bool PullingShaderData { get; set; }
 
-        public static SimplexNoiseGenerator Generator { get; private set; }
+        public static SimplexNoiseGenerator TerrainGeneratorSimplex { get; private set; }
+        public static DiamondSquare TerrainGeneratorDiamondSquare { get; private set; }
+
         public static ChunkOptimized[] Chunks { get; private set; }
 
         public static List<int> IndexStack { get; private set; }
@@ -50,8 +51,6 @@ namespace MinecraftClone.CoreII.Chunk
         public static int RenderingChunks { get; set; }
         public static int UpdatingChunks { get; set; }
 
-        public static int[, ,] Indices { get; set; }
-
         public enum MoveDirection
         {
             North,
@@ -61,7 +60,13 @@ namespace MinecraftClone.CoreII.Chunk
             NULL
             //TOOD: ADD NORTH-WEST[EAST] SOUTH-WEST[EAST]
         }
+        public enum GeneratorAlgorithm
+        {
+            SimplexNoise,
+            DiamondSquare
+        };
 
+        public static GeneratorAlgorithm Algorithm { get; set; }
         public static MoveDirection MovedDirection { get; private set; }
 
         public void Start(int sea_level, int seed)
@@ -78,43 +83,28 @@ namespace MinecraftClone.CoreII.Chunk
             Initialize();
         }
 
-        private void Initialize()
+        public void Initialize()
         {
             Models.GlobalModels.IndexModelTuple.Add(0, Global.GlobalShares.GlobalContent.Load<Model>(@"Model\Cube"));
             Cube.Initialize();
 
-            Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Grass, new Vector2(GlobalShares.Grass, 0));
-            Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Dirt, new Vector2(GlobalShares.Dirt, 0));
-            Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Stone, new Vector2(GlobalShares.Stone, 0));
-            Models.GlobalModels.IndexTextureTuple.Add((int)Global.GlobalShares.Identification.Water, new Vector2(GlobalShares.Water, 0));
+            Models.GlobalModels.IndexTextureTuple.Add((short)Global.GlobalShares.Identification.Grass, GlobalShares.Grass);
+            Models.GlobalModels.IndexTextureTuple.Add((short)Global.GlobalShares.Identification.Dirt, GlobalShares.Dirt);
+            Models.GlobalModels.IndexTextureTuple.Add((short)Global.GlobalShares.Identification.Stone, GlobalShares.Stone);
+            Models.GlobalModels.IndexTextureTuple.Add((short)Global.GlobalShares.Identification.Water, GlobalShares.Water);
 
             IndexStack = new List<int>();
-            Indices = new int[ChunkOptimized.Width, ChunkOptimized.Height, ChunkOptimized.Depth];
 
-            for (int i = 0; i < ChunkOptimized.Width; i++)
-            {
-                for (int j = 0; j < ChunkOptimized.Depth; j++)
-                {
-                    for (int k = 0; k < ChunkOptimized.Height; k++)
-                    {
-                        Indices[i, k, j] = (j * ChunkOptimized.Width * ChunkOptimized.Height) + ((k) * ChunkOptimized.Depth) + i;
-                    }
-                }
-            }
+            Chunks = new ChunkOptimized[Width * Depth];
 
-            RunGeneration(Seed);
+            TerrainGeneratorSimplex = new SimplexNoise.SimplexNoiseGenerator(Seed, 1f / 512f, 1f / 512f, 1f / 512f, 1f / 512f);
+            TerrainGeneratorSimplex.Octaves = 5;
+            TerrainGeneratorSimplex.Factor = 200;
+            TerrainGeneratorSimplex.Sealevel = SeaLevel;
         }
 
-        public void RunGeneration(int seed)
-        {
-            Chunks = new ChunkOptimized[Width * Depth];
-            Seed = seed;
-
-            Generator = new SimplexNoise.SimplexNoiseGenerator(Seed, 1f / 512f, 1f / 512f, 1f / 512f, 1f / 512f);
-            Generator.Octaves = 5;
-            Generator.Factor = 200;
-            Generator.Sealevel = SeaLevel;
-
+        public void RunGeneration()
+        {  
             new Thread(new ThreadStart(() =>
             {
                 Stopwatch sw = new Stopwatch();
@@ -123,7 +113,7 @@ namespace MinecraftClone.CoreII.Chunk
                 {
                     for (int x = 0; x < Width; x++)
                     {
-                        UploadNewChunk(new ChunkOptimized(new Vector3(x * ChunkOptimized.Width, 0, y * ChunkOptimized.Depth)));
+                        UploadNewChunk(new ChunkOptimized(new Vector3(x * ChunkOptimized.Width, 0, y * ChunkOptimized.Depth), (ushort)(x + y * Width)));
                     }
                 }
                 Parallel.ForEach(Chunks, new Action<ChunkOptimized>(Chunk =>
@@ -134,7 +124,6 @@ namespace MinecraftClone.CoreII.Chunk
                 Console.WriteLine("DONE[MAP_GENERATION: {0} s]", sw.Elapsed.TotalSeconds);
             })).Start();
         }
-
         public void Update(GameTime gTime)
         {
             TotalUpdate = UpdatingChunks = 0;
@@ -144,7 +133,6 @@ namespace MinecraftClone.CoreII.Chunk
                     Chunks[i].Update(gTime);
             }));
         }
-
         public void RenderChunks()
         {
             TotalRender = MaximumRender = RenderingChunks = 0;
@@ -154,10 +142,11 @@ namespace MinecraftClone.CoreII.Chunk
                 {
                     Chunks[i].Render();
                     RenderingChunks++;
-                    //BoundingBoxRenderer.Render(Chunks[i].ChunkArea, Global.GlobalShares.GlobalDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Red);   
+                    BoundingBoxRenderer.Render(Chunks[i].ChunkArea, Global.GlobalShares.GlobalDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Red);   
                 }
             }
         }
+
         public void UploadNewChunk(ChunkOptimized chunk)
         {
             if (ChunkIndexCounter + 1 >= Chunks.Length)
@@ -179,8 +168,10 @@ namespace MinecraftClone.CoreII.Chunk
                         for (int i = Surrounding.IndexRenderer.Count - 1; i >= 0; i--)
                         {
                             int Index = Surrounding.IndexRenderer[i];
-                            if (BoundingBoxRenderer.IntersectRayVsBox(Surrounding.ChunkData[Index].PickingBox, r, out DistanceToCube, out Face))
-                                yield return new Profile(Surrounding, Index, Face, DistanceToCube);
+                            if (Surrounding.ChunkData[Surrounding.IndexRenderer[i]].Id != (short)Global.GlobalShares.Identification.Water &&
+                                Surrounding.ChunkData[Surrounding.IndexRenderer[i]].Id != -1 &&
+                                BoundingBoxRenderer.IntersectRayVsBox(Surrounding.ChunkData[Index].PickingBox, r, out DistanceToCube, out Face))
+                                yield return new Profile(Surrounding, (int)Index, Face, DistanceToCube);
                         }
                 }
             }
@@ -203,7 +194,6 @@ namespace MinecraftClone.CoreII.Chunk
             }
             return null;
         }
-
         public static void GetChunkArea(Vector3 coordinates)
         {
             Old = CurrentChunk;
@@ -240,154 +230,11 @@ namespace MinecraftClone.CoreII.Chunk
                                 MovedDirection = MoveDirection.South;
                         }
                         else CurrentChunk.ParseSurroundingChunks();
-
-                        GenerateNewChunks(MovedDirection);
+                        if (Algorithm != GeneratorAlgorithm.DiamondSquare)
+                            GenerateNewChunks(MovedDirection);
                         break;
                     }
         }
-
-        #region "OLD"
-
-        //public void RequestTerrainGenerationZ()
-        //{
-        //    ChunkOptimized[] TemporaryChunkMap = Chunks.ToArray();
-        //    ChunkGenerationQueue.Clear();
-        //    IsRunningTask = false;
-
-        //    for (int i = 0; i < Width; i++)
-        //    {
-        //        int Index = i + 0 * Width;
-        //        if (!Camera3D.GlobalBox.Intersects(Chunks[Index].ChunkArea))
-        //        {
-        //            if (!IsRunningTask)
-        //            {
-        //                IsRunningTask = true;
-        //                DepthCounter++;
-        //            }
-        //            TemporaryChunkMap[Index].Dispose();
-        //            TemporaryChunkMap[Index] = new
-        //                ChunkOptimized(new Vector3(i * ChunkOptimized.Width, 0, (Depth - 1) * ChunkOptimized.Depth),
-        //                new Vector3(0, 0, DepthCounter * ChunkOptimized.Depth));
-
-        //            for (int j = 0; j < Depth - 1; j++)
-        //            {
-        //                ChunkOptimized Old = TemporaryChunkMap[i + (j + 1) * Width];
-        //                Old.ChunkTranslation -= new Vector3(0, 0, ChunkOptimized.Depth);
-        //                Old.ParseSurroundingChunks();
-        //                TemporaryChunkMap[i + (j + 1) * Width] = TemporaryChunkMap[i + j * Width];
-        //                TemporaryChunkMap[i + j * Width] = Old;
-        //            }
-        //            ChunkGenerationQueue.Add(i + (Depth - 1) * Width);
-        //        }
-        //    }
-        //    IsRunningTask = false;
-        //    for (int i = 0; i < Width; i++)
-        //    {
-        //        int Index = i + (Depth - 1) * Width;
-        //        if (!Camera3D.GlobalBox.Intersects(Chunks[Index].ChunkArea))
-        //        {
-        //            if (!IsRunningTask)
-        //            {
-        //                IsRunningTask = true;
-        //                DepthCounter--;
-        //            }
-        //            TemporaryChunkMap[Index].Dispose();
-        //            TemporaryChunkMap[Index] = new
-        //                ChunkOptimized(new Vector3(i * ChunkOptimized.Width, 0, 0),
-        //                new Vector3(0, 0, DepthCounter * ChunkOptimized.Depth));
-
-        //            for (int j = Depth - 1; j >= 1; j--)
-        //            {
-        //                ChunkOptimized Old = TemporaryChunkMap[i + (j - 1) * Width];
-        //                Old.ChunkTranslation += new Vector3(0, 0, ChunkOptimized.Depth);
-        //                Old.ParseSurroundingChunks();
-        //                TemporaryChunkMap[i + (j - 1) * Width] = TemporaryChunkMap[i + j * Width];
-        //                TemporaryChunkMap[i + j * Width] = Old;
-        //            }
-        //            ChunkGenerationQueue.Add(i + 0 * Width);
-        //        }
-        //    }
-
-        //    FlushChunkManager(TemporaryChunkMap);
-        //}
-        //public void RequestTerrainGenerationX()
-        //{
-        //    ChunkOptimized[] TemporaryChunkMap = Chunks.ToArray();
-        //    ChunkGenerationQueue.Clear();
-        //    IsRunningTask = false;
-
-        //    for (int i = 0; i < Depth; i++)
-        //    {
-        //        int Index = 0 + i * Width;
-        //        if (!Camera3D.GlobalBox.Intersects(Chunks[Index].ChunkArea))
-        //        {
-        //            if (!IsRunningTask)
-        //            {
-        //                IsRunningTask = true;
-        //                WidthCounter++;
-        //            }
-        //            TemporaryChunkMap[Index].Dispose();
-        //            TemporaryChunkMap[Index] = new ChunkOptimized(new Vector3((Width - 1) * ChunkOptimized.Width, 0, i * ChunkOptimized.Depth),
-        //                new Vector3(WidthCounter * ChunkOptimized.Width, 0, 0));
-
-        //            for (int j = 0; j < Width - 1; j++)
-        //            {
-        //                ChunkOptimized Old = TemporaryChunkMap[(j + 1) + i * Width];
-        //                Old.ChunkTranslation -= new Vector3(ChunkOptimized.Width, 0, 0);
-        //                Old.ParseSurroundingChunks();
-        //                TemporaryChunkMap[(j + 1) + i * Width] = TemporaryChunkMap[j + i * Width];
-        //                TemporaryChunkMap[j + i * Width] = Old;
-
-        //            }
-
-        //            ChunkGenerationQueue.Add((Width - 1) + i * Width);
-        //        }
-        //    }
-
-        //    for (int i = 0; i < Depth; i++)
-        //    {
-        //        int Index = (Width - 1) + i * Width;
-        //        if (!Camera3D.GlobalBox.Intersects(Chunks[Index].ChunkArea))
-        //        {
-        //            if (!IsRunningTask)
-        //            {
-        //                IsRunningTask = true;
-        //                WidthCounter--;
-        //            }
-        //            TemporaryChunkMap[Index].Dispose();
-        //            TemporaryChunkMap[Index] = new ChunkOptimized(new Vector3(0, 0, i * ChunkOptimized.Depth),
-        //                new Vector3(WidthCounter * ChunkOptimized.Width, 0, 0));
-
-        //            for (int j = Width - 1; j >= 1; j--)
-        //            {
-        //                ChunkOptimized Old = TemporaryChunkMap[(j - 1) + i * Width];
-        //                Old.ChunkTranslation += new Vector3(ChunkOptimized.Width, 0, 0);
-        //                Old.ParseSurroundingChunks();
-        //                TemporaryChunkMap[(j - 1) + i * Width] = TemporaryChunkMap[j + i * Width];
-        //                TemporaryChunkMap[j + i * Width] = Old;
-        //            }
-        //            ChunkGenerationQueue.Add(0 + i * Width);
-        //        }
-        //    }
-
-        //    FlushChunkManager(TemporaryChunkMap);
-
-        //}
-
-        //public void FlushChunkManager(ChunkOptimized[] TemporaryChunkMap)
-        //{
-        //    if (ChunkGenerationQueue.Count > 0)
-        //    {
-        //        Chunks = TemporaryChunkMap;
-        //        Parallel.ForEach(ChunkGenerationQueue, new Action<int>(index =>
-        //        {
-        //            Chunks[index].Generate();
-        //        }));
-        //        TemporaryChunkMap = new ChunkOptimized[0];
-        //    }
-        //}
-
-        #endregion
         public static void GenerateNewChunks(MoveDirection direction)
         {
             //South : + Z
@@ -396,8 +243,6 @@ namespace MinecraftClone.CoreII.Chunk
             //EAST : + X
             //WEST : - Z
             IndexStack.Clear();
-            ChunkOptimized[] TemporaryChunks = Chunks.ToArray();
-
             switch (direction)
             {
                 case MoveDirection.North:
@@ -405,15 +250,15 @@ namespace MinecraftClone.CoreII.Chunk
                     for (int i = 0; i < Width; i++)
                     {
                         int Index = i + (Depth - 1) * Width;
-                        TemporaryChunks[Index].Dispose(); // FREE MEMORY
-                        TemporaryChunks[Index] = new ChunkOptimized(new Vector3(i * ChunkOptimized.Width, 0, 0));
+                        Chunks[Index].Dispose(); // FREE MEMORY
+                        Chunks[Index] = new ChunkOptimized(new Vector3(i * ChunkOptimized.Width, 0, 0), (ushort)Index);
                         //SWAP CHUNKS
                         for (int j = Depth - 1; j > 0; j--)
                         {
-                            ChunkOptimized OldChunk = TemporaryChunks[i + (j - 1) * Width];
+                            ChunkOptimized OldChunk = Chunks[i + (j - 1) * Width];
                             OldChunk.ChunkTranslation += new Vector3(0, 0, ChunkOptimized.Depth);
-                            TemporaryChunks[i + (j - 1) * Width] = TemporaryChunks[i + j * Width];
-                            TemporaryChunks[i + j * Width] = OldChunk;
+                            Chunks[i + (j - 1) * Width] = Chunks[i + j * Width];
+                            Chunks[i + j * Width] = OldChunk;
 
                         }
                         IndexStack.Add(i + 0 * Width);
@@ -425,15 +270,15 @@ namespace MinecraftClone.CoreII.Chunk
                     for (int i = 0; i < Width; i++)
                     {
                         int Index = i + 0 * Width;
-                        TemporaryChunks[Index].Dispose(); // FREE MEMORY
-                        TemporaryChunks[Index] = new ChunkOptimized(new Vector3(i * ChunkOptimized.Width, 0, (Depth - 1) * ChunkOptimized.Depth));
+                        Chunks[Index].Dispose(); // FREE MEMORY
+                        Chunks[Index] = new ChunkOptimized(new Vector3(i * ChunkOptimized.Width, 0, (Depth - 1) * ChunkOptimized.Depth), (ushort)Index);
                         //SWAP CHUNKS
                         for (int j = 0; j < Depth - 1; j++)
                         {
-                            ChunkOptimized OldChunk = TemporaryChunks[i + (j + 1) * Width];
+                            ChunkOptimized OldChunk = Chunks[i + (j + 1) * Width];
                             OldChunk.ChunkTranslation -= new Vector3(0, 0, ChunkOptimized.Depth);
-                            TemporaryChunks[i + (j + 1) * Width] = TemporaryChunks[i + j * Width];
-                            TemporaryChunks[i + j * Width] = OldChunk;
+                            Chunks[i + (j + 1) * Width] = Chunks[i + j * Width];
+                            Chunks[i + j * Width] = OldChunk;
 
                         }
                         IndexStack.Add(i + (Depth - 1) * Width);
@@ -445,15 +290,15 @@ namespace MinecraftClone.CoreII.Chunk
                     for (int j = 0; j < Depth; j++)
                     {
                         int Index = 0 + j * Width;
-                        TemporaryChunks[Index].Dispose(); // FREE MEMORY
-                        TemporaryChunks[Index] = new ChunkOptimized(new Vector3((Width - 1) * ChunkOptimized.Width, 0, j * ChunkOptimized.Depth));
+                        Chunks[Index].Dispose(); // FREE MEMORY
+                        Chunks[Index] = new ChunkOptimized(new Vector3((Width - 1) * ChunkOptimized.Width, 0, j * ChunkOptimized.Depth), (ushort)Index);
                         //SWAP CHUNKS
                         for (int i = 0; i < Width - 1; i++)
                         {
-                            ChunkOptimized OldChunk = TemporaryChunks[(i + 1) + j * Width];
+                            ChunkOptimized OldChunk = Chunks[(i + 1) + j * Width];
                             OldChunk.ChunkTranslation -= new Vector3(ChunkOptimized.Width, 0, 0);
-                            TemporaryChunks[(i + 1) + j * Width] = TemporaryChunks[i + j * Width];
-                            TemporaryChunks[i + j * Width] = OldChunk;
+                            Chunks[(i + 1) + j * Width] = Chunks[i + j * Width];
+                            Chunks[i + j * Width] = OldChunk;
                         }
                         IndexStack.Add((Width - 1) + j * Width);
                     }
@@ -464,15 +309,15 @@ namespace MinecraftClone.CoreII.Chunk
                     for (int j = 0; j < Depth; j++)
                     {
                         int Index = (Width - 1) + j * Width;
-                        TemporaryChunks[Index].Dispose(); // FREE MEMORY
-                        TemporaryChunks[Index] = new ChunkOptimized(new Vector3(0, 0, j * ChunkOptimized.Depth));
+                        Chunks[Index].Dispose(); // FREE MEMORY
+                        Chunks[Index] = new ChunkOptimized(new Vector3(0, 0, j * ChunkOptimized.Depth), (ushort)Index);
                         //SWAP CHUNKS
                         for (int i = Width - 1; i > 0; i--)
                         {
-                            ChunkOptimized OldChunk = TemporaryChunks[(i - 1) + j * Width];
+                            ChunkOptimized OldChunk = Chunks[(i - 1) + j * Width];
                             OldChunk.ChunkTranslation += new Vector3(ChunkOptimized.Width, 0, 0);
-                            TemporaryChunks[(i - 1) + j * Width] = TemporaryChunks[i + j * Width];
-                            TemporaryChunks[i + j * Width] = OldChunk;
+                            Chunks[(i - 1) + j * Width] = Chunks[i + j * Width];
+                            Chunks[i + j * Width] = OldChunk;
                         }
                         IndexStack.Add(0 + j * Width);
                     }
@@ -482,12 +327,10 @@ namespace MinecraftClone.CoreII.Chunk
 
             if (IndexStack.Count > 0)
             {
-                Chunks = TemporaryChunks;
-                Parallel.ForEach(IndexStack, index =>
+                Parallel.For(0, IndexStack.Count, new Action<int>(i =>
                 {
-                    Chunks[index].Generate();
-                });
-                TemporaryChunks = new ChunkOptimized[0];
+                    Chunks[IndexStack[i]].Generate();
+                }));
                 MovedDirection = MoveDirection.NULL;
             }
         }
