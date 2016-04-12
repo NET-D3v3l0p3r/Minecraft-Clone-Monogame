@@ -1,3 +1,4 @@
+﻿//https://github.com/eogas/DiamondSquare/tree/master/DiamondSquare
 ﻿using Core.MapGenerator;
 using Earlz.BareMetal;
 using Microsoft.Xna.Framework;
