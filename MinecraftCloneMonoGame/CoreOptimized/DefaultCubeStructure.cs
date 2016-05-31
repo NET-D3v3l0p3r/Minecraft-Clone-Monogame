@@ -16,8 +16,6 @@ namespace MinecraftClone.CoreII
     //32x32 CHUNK-MAP ~ 512 MB!
     public class DefaultCubeClass : IDisposable
     {
-        public int Owner;
-
         public short Id;
         public int Index;
         public Action<DefaultCubeClass> Task;
@@ -25,7 +23,7 @@ namespace MinecraftClone.CoreII
         public Vector3 Position;
         public Vector3 ChunkTranslation;
 
-        public Vector3 IndexPosition;
+        public short IndX, IndY, IndZ;
 
         public Matrix Transformation;
 
@@ -42,14 +40,16 @@ namespace MinecraftClone.CoreII
         /// <param name="position"></param>
         /// <param name="translation"></param>
         /// <param name="index"></param>
-        public DefaultCubeClass(short id, Vector3 position, Vector3 translation, Vector3 index_pos, int index, int owner) 
+        public DefaultCubeClass(short id, Vector3 position, Vector3 translation, short ind_x, short ind_y, short ind_z , int index) 
         {
             Id = id;
-            Owner = owner;
             Index = index;
             Position = position;
             ChunkTranslation = translation;
-            IndexPosition = index_pos;
+
+            IndX = ind_x;
+            IndY = ind_y;
+            IndZ = ind_z;
 
             Initialize();
         }

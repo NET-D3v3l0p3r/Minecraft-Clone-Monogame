@@ -22,6 +22,7 @@ using Core.MapGenerator;
 using MinecraftCloneMonoGame.CoreOptimized.Global;
 using Earlz.BareMetal;
 using System.Threading;
+using MinecraftCloneMonoGame.CoreOptimized.Misc;
 namespace MinecraftClone
 {
     /// <summary>
@@ -49,6 +50,8 @@ namespace MinecraftClone
         //Test
         RenderTarget2D _RenderTarget;
         Effect _Blur;
+
+        GravitationController _GravitationController;
 
         public MinecraftCloneGame()
         {
@@ -89,12 +92,12 @@ namespace MinecraftClone
             _ChunkManager = new ChunkManager();
 
             ChunkManager.Algorithm = ChunkManager.GeneratorAlgorithm.SimplexNoise;
-            ChunkManager.Width = 32;
-            ChunkManager.Depth = 32;
+            ChunkManager.Width = 44;
+            ChunkManager.Depth = 44;
 
             Camera3D.Game = this;
 
-            _Camera = new Camera3D(0.0035f, 1.3f);
+            _Camera = new Camera3D(0.0035f, 0.25f);
 
             ChunkOptimized.Width = ChunkOptimized.Depth = 16;
             ChunkOptimized.Height = 256;
@@ -111,8 +114,12 @@ namespace MinecraftClone
             _InputManager = new Input();
             _FpsCounter = new CoreII.Profiler.FpsCounter();
 
+            _GravitationController = new GravitationController(5.972E24, new Vector3(0, -6000000, 0));
+            _GravitationController.DeltaTime = 0.025f;
+            _GravitationController.Damping = 0.549f;
+            _GravitationController.Friction = 0.05f;
 
-            Camera3D.CameraPosition = new Vector3((ChunkManager.Width / 2) * 16, 200, (ChunkManager.Depth / 2) * 16);
+            Camera3D.CameraPosition = new Vector3((ChunkManager.Width / 2) * 16, 135, (ChunkManager.Depth / 2) * 16);
             _Crosshair = Content.Load<Texture2D>(@"Textures\cross_cross");
             _DebugFont = Content.Load<SpriteFont>(@"DebugFont");
 
@@ -267,12 +274,14 @@ namespace MinecraftClone
             _InputManager.Update(gameTime);
             _ChunkManager.Update(gameTime);
 
+            //_GravitationController.Update(gameTime);
+
             if (Camera3D.IsChangigView || Camera3D.isMoving)
-                _Profile = _ChunkManager.GetFocusedCube(13.0f);
+                _Profile = ChunkManager.GetFocusedCube(4.0f);
 
             if (Camera3D.IsUnderWater)
                 Camera3D.MovementSpeed = 0.15f;
-            else Camera3D.MovementSpeed = 0.45f;
+            else Camera3D.MovementSpeed = 0.25f;
 
             if (Mouse.GetState().LeftButton == ButtonState.Pressed)
                 if (_Profile.HasValue)
@@ -308,11 +317,8 @@ namespace MinecraftClone
             if (!_StartGame)
             {
                 GraphicsDevice.SetRenderTarget(null);
-                spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
-                if (Camera3D.IsUnderWater)
-                    _Blur.CurrentTechnique.Passes[0].Apply();
+                spriteBatch.Begin( );
                 spriteBatch.Draw(_RenderTarget, new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight), Color.White);
-
                 spriteBatch.End();
                 return;
             }

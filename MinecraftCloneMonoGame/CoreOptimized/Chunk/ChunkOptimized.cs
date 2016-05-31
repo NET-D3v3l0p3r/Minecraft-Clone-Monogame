@@ -39,6 +39,15 @@ namespace MinecraftClone.CoreII.Chunk
         public bool Invalidate { get; set; }
         public BoundingBox ChunkArea { get; set; }
 
+        //~~~ GENERATEX DECLARATIONS ~~~
+
+        private List<VertexPositionColorTexture> ChunkVertices = new List<VertexPositionColorTexture>();
+        private VertexBuffer ChunkVertexBuffer;
+
+        private short[] Indices;
+        private IndexBuffer ChunkIndexBuffer;
+        
+
         public ChunkOptimized(Vector3 translation, ushort index)
         {
             Instancing = new HardwareInstancedRenderer();
@@ -170,14 +179,22 @@ namespace MinecraftClone.CoreII.Chunk
             else ChunkManager.Generated = false;
             Invalidate = true;
         }
-        private void Push(int x, int y, int z, short id)
+
+        private void GenerateX()
+        {
+
+        }
+
+        private void Push(int x, int y, int z, short id, bool flush = false)
         {
             if (y < Height)
             {
-                var Chunk = new DefaultCubeClass(-1, Vector3.Zero, Vector3.Zero, new Vector3(0, 0, 0), 0, Index);
+                var Chunk = new DefaultCubeClass(-1, Vector3.Zero, Vector3.Zero, 0,0,0, 0);
                 Chunk.Id = id;
                 Chunk.Index = (int)((z * ChunkOptimized.Width * ChunkOptimized.Height) + ((y) * ChunkOptimized.Depth) + x);
-                Chunk.IndexPosition = new Vector3(x, y, z);
+                Chunk.IndX = (short)x;
+                Chunk.IndY = (short)y;
+                Chunk.IndZ = (short)z;
                 Chunk.Position = new Vector3(x, y, z) + WorldTranslation;
                 Chunk.ChunkTranslation = ChunkTranslation;
                 Chunk.Initialize();
@@ -187,6 +204,9 @@ namespace MinecraftClone.CoreII.Chunk
 
                 UploadIndexRenderer((z * ChunkOptimized.Width * ChunkOptimized.Height) + ((y) * ChunkOptimized.Depth) + x);
                 ChunkManager.MaximumRender++;
+
+                if (flush)
+                    FlushChunk();
             }
             else Push(x, y - 1, z, id);
         }
@@ -234,13 +254,17 @@ namespace MinecraftClone.CoreII.Chunk
 
         }
 
+
+        public void AddToQueue(int index, int id)
+        {
+         
+        }
+
         public void Pop(int index)
         {
-            var int3 = ChunkData[index].IndexPosition;
-
-            int X = (int)int3.X;
-            int Y = (int)int3.Y;
-            int Z = (int)int3.Z;
+            short X = ChunkData[index].IndX;
+            short Y = ChunkData[index].IndY;
+            short Z = ChunkData[index].IndZ;
 
             int HeightForward = 0;
             int HeightBackward = 0;
@@ -301,6 +325,14 @@ namespace MinecraftClone.CoreII.Chunk
                 ChunkData[((Z + 1) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X].Id != -1)
                 && Y < HeightForward - 1)
                 Push(X, Y, Z + 1, (int)Global.GlobalShares.Identification.Grass);
+            else if (
+                SurroundingChunks[2].ChunkData[((0) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X] == null ||
+                SurroundingChunks[2].ChunkData[((0) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X] != null &&
+                SurroundingChunks[2].ChunkData[((0) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X].Id != -1
+                && Y < HeightForward - 1)
+            {
+                SurroundingChunks[2].Push(X, Y, 0, (int)Global.GlobalShares.Identification.Stone, true);
+            }
 
             if (Z - 1 >= 0 &&
                (ChunkData[((Z - 1) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X] == null ||
@@ -308,7 +340,14 @@ namespace MinecraftClone.CoreII.Chunk
                 ChunkData[((Z - 1) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X].Id != -1)
                 && Y < HeightBackward - 1)
                 Push(X, Y, Z - 1, (int)Global.GlobalShares.Identification.Grass);
-
+            else if (
+             SurroundingChunks[3].ChunkData[((15) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X] == null ||
+             SurroundingChunks[3].ChunkData[((15) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X] != null &&
+             SurroundingChunks[3].ChunkData[((15) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + X].Id != -1
+             && Y < HeightForward - 1)
+            {
+                SurroundingChunks[3].Push(X, Y, 15, (int)Global.GlobalShares.Identification.Stone, true);
+            }
 
             if (X + 1 < Width &&
                (ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + (X + 1)] == null ||
@@ -316,14 +355,29 @@ namespace MinecraftClone.CoreII.Chunk
                 ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + (X + 1)].Id != -1)
                 && Y < HeightRight - 1)
                 Push(X + 1, Y, Z, (int)Global.GlobalShares.Identification.Grass);
+            else if (
+             SurroundingChunks[0].ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + 0] == null ||
+             SurroundingChunks[0].ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + 0] != null &&
+             SurroundingChunks[0].ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + 0].Id != -1
+             && Y < HeightForward - 1)
+            {
+                SurroundingChunks[0].Push(0, Y, Z, (int)Global.GlobalShares.Identification.Stone, true);
+            }
 
             if (X - 1 >= 0 &&
                (ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + (X - 1)] == null ||
                 ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + (X - 1)] != null &&
                 ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + (X - 1)].Id != -1)
                 && Y < HeightLeft - 1)
-                Push(X - 1, Y, Z, (int)Global.GlobalShares.Identification.Grass);
-
+                Push(X - 1, Y, Z, (int)Global.GlobalShares.Identification.Grass );
+            else if (
+             SurroundingChunks[1].ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + 15] == null ||
+             SurroundingChunks[1].ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + 15] != null &&
+             SurroundingChunks[1].ChunkData[((Z) * ChunkOptimized.Width * ChunkOptimized.Height) + ((Y) * ChunkOptimized.Depth) + 15].Id != -1
+             && Y < HeightForward - 1)
+             {
+                SurroundingChunks[1].Push(15, Y, Z, (int)Global.GlobalShares.Identification.Stone, true);
+             }
 
             ChunkData[index].Dispose();
             IndexRenderer.Remove(index);

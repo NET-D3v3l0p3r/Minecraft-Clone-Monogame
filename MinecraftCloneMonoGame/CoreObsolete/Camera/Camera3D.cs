@@ -46,6 +46,9 @@ namespace MinecraftClone.Core.Camera
         public static float MovementSpeed { get; set; }
 
         public static int CurrentHeight = 0;
+
+        public static BoundingBox CollisionBox;
+
         public enum Quarter
         {
             North,
@@ -67,7 +70,7 @@ namespace MinecraftClone.Core.Camera
             MouseDPI = DPI;
             MovementSpeed = Speed;
 
-            RenderDistance = ChunkManager.Width * 16;
+            RenderDistance = ChunkManager.Width * 8;
             CameraPosition = new Vector3(0, 215, 0);
             ProjectionMatrix = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4,  GlobalShares.GlobalDevice.Viewport.AspectRatio, 0.1f, RenderDistance);
 
@@ -156,7 +159,7 @@ namespace MinecraftClone.Core.Camera
 
         public static void Move(Vector3 unit)
         {
-            Matrix Rotation = Matrix.CreateRotationX(Pitch) * Matrix.CreateRotationY(Yaw);
+            Matrix Rotation =  Matrix.CreateRotationX(Pitch) * Matrix.CreateRotationY(Yaw);
             Vector3 TransformedVector = Vector3.Transform(unit, Rotation);
 
             TransformedVector *= MovementSpeed;
@@ -170,35 +173,15 @@ namespace MinecraftClone.Core.Camera
             if (RequestArea = !IsColliding(new Vector3(CameraPosition.X, CameraPosition.Y + TransformedVector.Y, CameraPosition.Z)))
                 CameraPosition.Y += TransformedVector.Y;
 
+
             if (RequestArea)
                 ChunkManager.GetChunkArea(CameraPosition);
 
-
-            //GET CHUNK POSITION
-            int X = (int)((int)CameraPosition.X - (int)(CameraPosition.X / ChunkOptimized.Width) * 16);
-            int Y = (int)((int)CameraPosition.Z - (int)(CameraPosition.Z / ChunkOptimized.Depth) * 16);
-
-            if (X < 0)
-                X = 16 + X;
-            if (Y < 0)
-                Y = 16 + Y;
-
-            CurrentHeight = (int)ChunkManager.CurrentChunk.HeightMap[X, Y] - 1;
-
-            for (int i = (int)CameraPosition.Y + 2; i < ChunkOptimized.Height; i++)
-            {
-                var UpperCube = ChunkManager.CurrentChunk.ChunkData[(Y * ChunkOptimized.Width * ChunkOptimized.Height) + ((i) * ChunkOptimized.Depth) + X];
-
+            Ray r = new Ray(CameraPosition, new Vector3(0, 1, 0));
+            var UpperCube = ChunkManager.GetFocusedCubeSpecified(float.MaxValue, r, (int) GlobalShares.Identification.Water);
+            IsUnderWater = false;
+            if (UpperCube.HasValue )
                 IsUnderWater = true;
-                if (UpperCube != null && (UpperCube.Id != (short)GlobalShares.Identification.Water && UpperCube.Id != -1)   || i == ChunkOptimized.Height - 1)
-                {
-                    IsUnderWater = false;
-                    break;
-                }
-                else if (UpperCube != null && UpperCube.Id == (short)GlobalShares.Identification.Water)
-                    break;
-            }
-
 
         }
 
@@ -242,7 +225,8 @@ namespace MinecraftClone.Core.Camera
 
             Position = CameraPosition;
 
-
+            CollisionBox = new BoundingBox(new Vector3(-1 + CameraPosition.X, -1 + CameraPosition.Y, -1 + CameraPosition.Z),
+                               new Vector3(1 + CameraPosition.X, 1 + CameraPosition.Y, 1 + CameraPosition.Z));
 
         }
     }

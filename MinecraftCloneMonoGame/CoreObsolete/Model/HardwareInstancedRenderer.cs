@@ -114,14 +114,17 @@ namespace MinecraftClone.Core.Model
 
                 InstancedVertexBuffer.SetData<Matrix>(MatrixBufferArray, 0, MatrixBufferArray.Length, SetDataOptions.Discard);
                 InstancedTextureBuffer.SetData<Vector2>(TextureBufferArray, 0, TextureBufferArray.Length, SetDataOptions.Discard);
+
+                for (int i = 0; i < Texture2Ds.Length; i++)
+                {
+                    if (Texture2Ds[i] != null)
+                        InstancingShader.Parameters["Texture" + i].SetValue(Texture2Ds[i]);
+                }
+
                 Invalidate = false;
             }
 
-            for (int i = 0; i < Texture2Ds.Length; i++)
-            {
-                if (Texture2Ds[i] != null)
-                    InstancingShader.Parameters["Texture" + i].SetValue(Texture2Ds[i]);
-            }
+            
 
             foreach (var mesh in Model.Meshes)
             {

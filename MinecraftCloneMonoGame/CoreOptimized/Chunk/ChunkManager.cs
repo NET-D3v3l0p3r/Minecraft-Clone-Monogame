@@ -142,7 +142,7 @@ namespace MinecraftClone.CoreII.Chunk
                 {
                     Chunks[i].Render();
                     RenderingChunks++;
-                    BoundingBoxRenderer.Render(Chunks[i].ChunkArea, Global.GlobalShares.GlobalDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Red);   
+                    //BoundingBoxRenderer.Render(Chunks[i].ChunkArea, Global.GlobalShares.GlobalDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Red);
                 }
             }
         }
@@ -155,7 +155,7 @@ namespace MinecraftClone.CoreII.Chunk
             Chunks[ChunkIndexCounter] = chunk;
         }
 
-        private IEnumerable<Profile> GetAllIntersectingEntities(Ray r)
+        private static IEnumerable<Profile> GetAllIntersectingEntities(Ray r)
         {
             float DistanceToCube = .0f;
             int Face = 0;
@@ -175,15 +175,33 @@ namespace MinecraftClone.CoreII.Chunk
                         }
                 }
             }
+        }
+
+        private static IEnumerable<Profile> GetAllIntersectingEntitiesLocalAll(Ray r)
+        {
+            float DistanceToCube = .0f;
+            int Face = 0;
+            if (CurrentChunk != null)
+            {
+                for (int i = CurrentChunk.IndexRenderer.Count - 1; i >= 0; i--)
+                {
+                    int Index = CurrentChunk.IndexRenderer[i];
+                    float? rParam = CurrentChunk.ChunkData[Index].PickingBox.Intersects(r);
+                    if (rParam.HasValue)
+                        yield return new Profile(CurrentChunk, (int)Index, -1, rParam);
+                }
+
+            }
 
         }
+
         /// <summary>
         /// Gets the targeted DefaultCubeStructure as Profile{Structure}
         /// <para />Notice: Profile is nullable.
         /// </summary>
         /// <param name="max_dist"></param>
         /// <returns></returns>
-        public Profile? GetFocusedCube(float max_dist)
+        public static Profile? GetFocusedCube(float max_dist)
         {
             var entities = GetAllIntersectingEntities(Camera3D.Ray);
             if (entities.Count() > 0)
@@ -194,6 +212,19 @@ namespace MinecraftClone.CoreII.Chunk
             }
             return null;
         }
+
+        public static Profile? GetFocusedCubeSpecified(float max_dist, Ray r, int id)
+        {
+            var entities = GetAllIntersectingEntitiesLocalAll(r);
+            if (entities.Count() > 0)
+            {
+                var entity = entities.ToList().OrderBy(p => (p.AABB.Min - Camera3D.CameraPosition).Length()).ToList()[0];
+                if (entity.Distance <= max_dist && CurrentChunk.ChunkData[entity.Index].Id == id)
+                    return entity;
+            }
+            return null;
+        }
+
         public static void GetChunkArea(Vector3 coordinates)
         {
             Old = CurrentChunk;

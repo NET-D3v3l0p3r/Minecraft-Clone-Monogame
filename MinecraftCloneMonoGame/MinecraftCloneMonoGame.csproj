@@ -75,6 +75,9 @@
     <Compile Include="CoreOptimized\DefaultCubeStructure.cs" />
     <Compile Include="CoreOptimized\Global\GlobalShares.cs" />
     <Compile Include="CoreOptimized\Global\Profile.cs" />
+    <Compile Include="CoreOptimized\Misc\Animals\ArtificallyInteligence.cs" />
+    <Compile Include="CoreOptimized\Misc\Animals\Fish.cs" />
+    <Compile Include="CoreOptimized\Misc\GravitationController.cs" />
     <Compile Include="CoreOptimized\Models\Cube.cs" />
     <Compile Include="CoreOptimized\Models\GlobalModels.cs" />
     <Compile Include="CoreOptimized\Profiler\FpsCounter.cs" />
@@ -105,9 +108,7 @@
   <ItemGroup>
     <None Include="app.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="CoreOptimized\Misc\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath)\MonoGame\v3.0\MonoGame.Content.Builder.targets" />
   <PropertyGroup>
