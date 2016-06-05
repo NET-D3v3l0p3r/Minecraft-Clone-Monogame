@@ -82,16 +82,27 @@
     <Compile Include="CoreOptimized\Models\GlobalModels.cs" />
     <Compile Include="CoreOptimized\Profiler\FpsCounter.cs" />
     <Compile Include="MinecraftCloneGame.cs" />
+    <Compile Include="Multiplayer\Global\GlobalClient.cs" />
+    <Compile Include="Multiplayer\Global\GlobalHost.cs" />
+    <Compile Include="Multiplayer\Global\GlobalNetworkCard.cs" />
+    <Compile Include="Multiplayer\Global\GlobalOnlinePlayer.cs" />
+    <Compile Include="Multiplayer\LocalOnlinePlayer.cs" />
+    <Compile Include="Multiplayer\NetworkCard.cs" />
+    <Compile Include="Multiplayer\LocalHost.cs" />
+    <Compile Include="Multiplayer\LocalClient.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="BareMetal">
       <HintPath>bin\Windows\x86\Debug\ThirdPartyLibraries\BareMetal.dll</HintPath>
+      <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="MonoGame.Framework">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\MonoGame\v3.0\Assemblies\Windows\MonoGame.Framework.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Drawing" />

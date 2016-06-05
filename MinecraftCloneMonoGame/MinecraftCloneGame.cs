@@ -23,6 +23,8 @@ using MinecraftCloneMonoGame.CoreOptimized.Global;
 using Earlz.BareMetal;
 using System.Threading;
 using MinecraftCloneMonoGame.CoreOptimized.Misc;
+using MinecraftCloneMonoGame.Multiplayer;
+using MinecraftCloneMonoGame.Multiplayer.Global;
 namespace MinecraftClone
 {
     /// <summary>
@@ -78,10 +80,11 @@ namespace MinecraftClone
             
             base.Initialize();
         }
-
+        GlobalOnlinePlayer _GlobalPlayer;
         protected override void LoadContent()
         {
-            // Create a new SpriteBatch, which can be used to draw textures.
+            // Create a new SpriteBatch, which can be used to draw textures
+
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
 
@@ -167,6 +170,16 @@ namespace MinecraftClone
 
             }), true));
 
+
+            _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.F12, new Action(() => { }), new Action(() =>
+            {
+                var _IPeP = Microsoft.VisualBasic.Interaction.InputBox("CONNECT TO HOST[PATTERN: IP:PORT]:").Split(':');
+
+                LocalOnlinePlayer _Player = new LocalOnlinePlayer(8215, _IPeP[0], int.Parse(_IPeP[1]));
+                _Player.BindOnKeyboard(_InputManager);
+                _Player.BindOnCamera();
+
+            }), true));
 
             //GUI
             this.IsMouseVisible = true;
@@ -255,6 +268,10 @@ namespace MinecraftClone
 
             frm.Controls.Add(_GeneratorDescp);
 
+            System.Windows.Forms.TrackBar _RenderDistance = new System.Windows.Forms.TrackBar();
+
+            _GlobalPlayer = new GlobalOnlinePlayer("77.21.164.133", 8000);
+
 
         }
         protected override void UnloadContent()
@@ -273,6 +290,9 @@ namespace MinecraftClone
             Camera3D.Update(gameTime);
             _InputManager.Update(gameTime);
             _ChunkManager.Update(gameTime);
+
+            if(Keyboard.GetState().IsKeyDown(Keys.F3))
+                _GlobalPlayer.SendEcho(); 
 
             //_GravitationController.Update(gameTime);
 
