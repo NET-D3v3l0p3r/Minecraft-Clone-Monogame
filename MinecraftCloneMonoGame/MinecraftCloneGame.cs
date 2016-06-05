@@ -270,7 +270,7 @@ namespace MinecraftClone
 
             System.Windows.Forms.TrackBar _RenderDistance = new System.Windows.Forms.TrackBar();
 
-            _GlobalPlayer = new GlobalOnlinePlayer("77.21.164.133", 8000);
+            _GlobalPlayer = new GlobalOnlinePlayer("WAN", 8000);
 
 
         }
