@@ -299,7 +299,12 @@ namespace MinecraftClone
 
             System.Windows.Forms.TrackBar _RenderDistance = new System.Windows.Forms.TrackBar();
 
+<<<<<<< HEAD
     
+=======
+            _GlobalPlayer = new GlobalOnlinePlayer("WAN", 8000);
+
+>>>>>>> origin/master
 
         }
         protected override void UnloadContent()
