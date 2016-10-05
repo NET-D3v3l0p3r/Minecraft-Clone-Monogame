@@ -380,7 +380,7 @@ namespace MinecraftClone.CoreII.Chunk.SimplexNoise
                 frequencyY *= 2;
 
             }
-            return noise * Factor / MaxValue;
+            return (noise * Factor / MaxValue) + Sealevel;
         }
         /// <summary>
         /// Gibt ein float-Wert einer 2D-Noise an gegebener Position zurück, welche kachelbar ist

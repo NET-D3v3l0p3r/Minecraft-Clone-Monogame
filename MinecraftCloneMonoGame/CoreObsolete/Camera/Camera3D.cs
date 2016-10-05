@@ -24,6 +24,8 @@ namespace MinecraftClone.Core.Camera
         private static Vector3 Position;
         private static Vector2 PitchYaw;
 
+        private static bool Initialized;
+
         public static bool isMoving { get; set; }
         public static bool IsChangigView { get; set; }
 
@@ -70,8 +72,9 @@ namespace MinecraftClone.Core.Camera
             MouseDPI = DPI;
             MovementSpeed = Speed;
 
-            RenderDistance = ChunkManager.Width * 8;
+            RenderDistance = ChunkManager.Width * 4 * 2;
             CameraPosition = new Vector3(0, 215, 0);
+
             ProjectionMatrix = Matrix.CreatePerspectiveFieldOfView(MathHelper.PiOver4,  GlobalShares.GlobalDevice.Viewport.AspectRatio, 0.1f, RenderDistance);
 
     
@@ -87,6 +90,13 @@ namespace MinecraftClone.Core.Camera
 
 
             Pitch = MathHelper.Clamp(Pitch, -1.5f, 1.5f);
+
+            if (!Initialized)
+            {
+                Pitch = 0.075f;
+                Initialized = true;
+            }
+            
 
             Matrix RotationX = Matrix.Identity;
             Matrix RotationY = Matrix.Identity;
@@ -159,7 +169,7 @@ namespace MinecraftClone.Core.Camera
 
         public static void Move(Vector3 unit)
         {
-            Matrix Rotation =  Matrix.CreateRotationX(Pitch) * Matrix.CreateRotationY(Yaw);
+            Matrix Rotation =  Matrix.CreateRotationY(Yaw);
             Vector3 TransformedVector = Vector3.Transform(unit, Rotation);
 
             TransformedVector *= MovementSpeed;
@@ -178,7 +188,7 @@ namespace MinecraftClone.Core.Camera
                 ChunkManager.GetChunkArea(CameraPosition);
 
             Ray r = new Ray(CameraPosition, new Vector3(0, 1, 0));
-            var UpperCube = ChunkManager.GetFocusedCubeSpecified(float.MaxValue, r, (int) GlobalShares.Identification.Water);
+            var UpperCube = ChunkManager.GetFocusedCubeSpecified( ChunkManager.CurrentChunk, float.MaxValue, r, (int) GlobalShares.Identification.Water);
             IsUnderWater = false;
             if (UpperCube.HasValue )
                 IsUnderWater = true;

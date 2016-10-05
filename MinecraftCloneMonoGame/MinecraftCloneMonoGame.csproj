@@ -13,7 +13,7 @@
     <AssemblyName>MinecraftCloneMonoGame</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <MonoGamePlatform>Windows</MonoGamePlatform>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
   </PropertyGroup>
@@ -45,9 +45,13 @@
     <ApplicationIcon>Game.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject />
+    <StartupObject>MinecraftCloneMonoGame.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Atmosphere\CelestialBody.cs" />
+    <Compile Include="Atmosphere\Moon.cs" />
+    <Compile Include="Atmosphere\Stars.cs" />
+    <Compile Include="Atmosphere\Sun.cs" />
     <Compile Include="CoreObsolete\Camera\Camera3D.cs" />
     <Compile Include="CoreObsolete\Camera\Input.cs" />
     <Compile Include="CoreObsolete\Camera\Key\Key.cs" />
@@ -72,6 +76,7 @@
     <Compile Include="CoreOptimized\Chunk\DiamondSquare\DiamondSquare.cs" />
     <Compile Include="CoreOptimized\Chunk\SimplexNoise\INoise.cs" />
     <Compile Include="CoreOptimized\Chunk\SimplexNoise\SimplexNoiseGenerator.cs" />
+    <Compile Include="CoreOptimized\Chunk\X\ChunkX.cs" />
     <Compile Include="CoreOptimized\DefaultCubeStructure.cs" />
     <Compile Include="CoreOptimized\Global\GlobalShares.cs" />
     <Compile Include="CoreOptimized\Global\Profile.cs" />
@@ -119,7 +124,9 @@
   <ItemGroup>
     <None Include="app.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="CoreOptimized\Biomes\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath)\MonoGame\v3.0\MonoGame.Content.Builder.targets" />
   <PropertyGroup>

@@ -30,8 +30,9 @@ namespace MinecraftClone.CoreII
         public short TextureId;
         public float MetaData;
 
-        public BoundingBox CollisionBox { get; set; }
-        public BoundingBox PickingBox { get; set; }
+        public BoundingBox CollisionBox;
+        public BoundingBox PickingBox;
+
 
         /// <summary>
         /// Notice: Position = Position + WorldTranslation

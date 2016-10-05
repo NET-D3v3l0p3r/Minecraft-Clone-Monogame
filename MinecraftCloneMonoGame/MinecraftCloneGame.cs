@@ -25,6 +25,9 @@ using System.Threading;
 using MinecraftCloneMonoGame.CoreOptimized.Misc;
 using MinecraftCloneMonoGame.Multiplayer;
 using MinecraftCloneMonoGame.Multiplayer.Global;
+using MinecraftCloneMonoGame.Atmosphere;
+ 
+using System.Text;
 namespace MinecraftClone
 {
     /// <summary>
@@ -139,6 +142,8 @@ namespace MinecraftClone
                 GraphicsDevice.SamplerStates[i] = SamplerState.PointWrap;
             }
 
+            //_Moon = new Moon(GraphicsDevice, Content);
+
             _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.F11, new Action(() => { }), new Action(() => { _RenderDebug = !_RenderDebug; }), true));
 
             _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.S, new Action(() => { }), new Action(() =>
@@ -162,6 +167,18 @@ namespace MinecraftClone
             })
                 , false));
 
+            _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.LeftControl, new Action(() => { }), new Action(() =>
+            {
+                Camera3D.Move(new Vector3(0, -1, 0));
+            })
+                , false));
+
+            _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.Space, new Action(() => { }), new Action(() =>
+            {
+                Camera3D.Move(new Vector3(0, 1, 0));
+            })
+              , false));
+
             _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.Escape, new Action(() => { }), new Action(() => { Exit(); }), true));
             _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.F5, new Action(() => { }), new Action(() =>
             {
@@ -180,6 +197,17 @@ namespace MinecraftClone
                 _Player.BindOnCamera();
 
             }), true));
+
+
+            _InputManager.KeyList.Add(new Core.Camera.Key.KeyData(Keys.F6, new Action(() => { }), new Action(() =>
+            {
+                _GlobalPlayer = new GlobalOnlinePlayer("77.21.164.133", 8000);
+                _GlobalPlayer.BindOnCamera();
+                _GlobalPlayer.BindOnKeyboard(_InputManager);
+
+            }), true));
+
+   
 
             //GUI
             this.IsMouseVisible = true;
@@ -210,6 +238,7 @@ namespace MinecraftClone
                 {
                     _ChunkManager.Start(99, _SeedTB.Text);
                     _ChunkManager.RunGeneration();
+
                     frm.Controls.Clear();
                     _StartGame = true;
                     IsMouseVisible = false;
@@ -270,8 +299,7 @@ namespace MinecraftClone
 
             System.Windows.Forms.TrackBar _RenderDistance = new System.Windows.Forms.TrackBar();
 
-            _GlobalPlayer = new GlobalOnlinePlayer("77.21.164.133", 8000);
-
+    
 
         }
         protected override void UnloadContent()
@@ -287,12 +315,14 @@ namespace MinecraftClone
 
             ChunkManager.PullingShaderData = ChunkManager.UploadingShaderData = false;
 
+            //_Moon.Update(gameTime);
+
             Camera3D.Update(gameTime);
             _InputManager.Update(gameTime);
             _ChunkManager.Update(gameTime);
 
-            if(Keyboard.GetState().IsKeyDown(Keys.F3))
-                _GlobalPlayer.SendEcho(); 
+            if (Keyboard.GetState().IsKeyDown(Keys.F3))
+                _GlobalPlayer.SendEcho();
 
             //_GravitationController.Update(gameTime);
 
@@ -316,7 +346,7 @@ namespace MinecraftClone
 
         protected override void Draw(GameTime gameTime)
         {
-
+ 
 
             var ClearColor = Color.CornflowerBlue;
             if (Camera3D.IsUnderWater)
@@ -329,10 +359,11 @@ namespace MinecraftClone
             GraphicsDevice.RasterizerState = RasterizerState.CullCounterClockwise;
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
 
-            //if (ChunkManager.CurrentChunk != null)
-            //    foreach (var chunk in ChunkManager.CurrentChunk.SurroundingChunks)
-            //        if (chunk != null)
-            //            BoundingBoxRenderer.Render(chunk.ChunkArea, MinecraftClone.CoreII.Global.GlobalShares.GlobalDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Black);
+            if (_RenderDebug)
+                if (ChunkManager.CurrentChunk != null)
+                    foreach (var chunk in ChunkManager.CurrentChunk.SurroundingChunks)
+                        if (chunk != null)
+                            BoundingBoxRenderer.Render(chunk.ChunkArea, MinecraftClone.CoreII.Global.GlobalShares.GlobalDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Red);
 
             if (!_StartGame)
             {
@@ -346,6 +377,9 @@ namespace MinecraftClone
                 BoundingBoxRenderer.Render(_Profile.Value.AABB, GraphicsDevice, Camera3D.ViewMatrix, Camera3D.ProjectionMatrix, Color.Yellow);
 
             _ChunkManager.RenderChunks();
+
+            //_Moon.Render();
+
             GraphicsDevice.SetRenderTarget(null);
 
             

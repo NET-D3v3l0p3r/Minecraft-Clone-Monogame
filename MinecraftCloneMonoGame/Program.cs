@@ -33,8 +33,8 @@ namespace MinecraftCloneMonoGame
                 else if (_Decision == "GLOBAL")
                 {
                     Console.WriteLine("PORT: ");
+                    GlobalHost._SetMaxClients(25);
                     GlobalHost _Host = new GlobalHost(GetLocalIPAddress(), int.Parse(Console.ReadLine()));
-
                     while (true)
                     {
                         _Host.SendToAllClients("[ADMIN]: " + Console.ReadLine());

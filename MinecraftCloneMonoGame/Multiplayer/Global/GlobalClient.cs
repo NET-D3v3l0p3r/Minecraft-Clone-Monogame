@@ -47,13 +47,10 @@ namespace MinecraftCloneMonoGame.Multiplayer.Global
 
         }
 
-        public  void Send(string _dgram)
+        public  void Send(string _dgram, string param = "STRING")
         {
-            _BinWriter.Write("STRING");
-            _BinWriter.Flush();
-
+            _BinWriter.Write(param);
             _BinWriter.Write(_dgram);
-            _BinWriter.Flush();
         }
 
         public void Send(byte[] _dgram, Option _option)
@@ -62,30 +59,21 @@ namespace MinecraftCloneMonoGame.Multiplayer.Global
             {
                 case Option.NetworkCard:
                     _BinWriter.Write("NETWORK_CARD");
-                    _BinWriter.Flush();
                     _BinWriter.Write(_dgram.Length);
-                    _BinWriter.Flush();
                     _BinWriter.Write(_dgram);
-                    _BinWriter.Flush();
                     break;
                 case Option.Buffer:
                     _BinWriter.Write("BUFFER");
-                    _BinWriter.Flush();
                     _BinWriter.Write(_dgram.Length);
-                    _BinWriter.Flush();
                     _BinWriter.Write(_dgram);
-                    _BinWriter.Flush();
                     break;
             }
- 
         }
 
         public string Receive()
         {
             var _Message = _BinReader.ReadString();
-            _BinWriter.Write(255);
-            _BinWriter.Flush();
-            return _NetworkCard.Username + ":" + _Message; 
+            return _Message; 
         }
     }
 }

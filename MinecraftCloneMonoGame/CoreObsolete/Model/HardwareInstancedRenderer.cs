@@ -54,17 +54,49 @@ namespace MinecraftClone.Core.Model
         public HardwareInstancedRenderer()
         {
             WorldMatrix = Matrix.Identity;
+
             //MONOGAME BUG
-            while (!Initialized)
-            {
-                try
-                {
-                    InstancingShader = GlobalShares.GlobalContent.Load<Effect>("MainShader");
-                    Initialized = true;
-                }
-                catch { }
-            }
+            //while (!Initialized)
+            //{
+            //    try
+            //    {
+            //        InstancingShader = GlobalShares.GlobalContent.Load<Effect>("MainShader");
+            //        Initialized = true;
+            //    }
+            //    catch { }
+            //}
+
+            InstancingShader = GlobalShares.GlobalContent.Load<Effect>("MainShader");
+
             Model = GlobalModels.IndexModelTuple[0];
+            Texture2Ds = new Texture2D[16];
+
+            TextureBufferArray = new Vector2[0];
+            MatrixBufferArray = new Matrix[0];
+
+            TextureBuffer = new List<Vector2>();
+            MatrixBuffer = new List<Matrix>();
+
+        }
+
+        public HardwareInstancedRenderer(Microsoft.Xna.Framework.Graphics.Model _Model )
+        {
+            WorldMatrix = Matrix.Identity;
+
+            //MONOGAME BUG
+            //while (!Initialized)
+            //{
+            //    try
+            //    {
+            //        InstancingShader = GlobalShares.GlobalContent.Load<Effect>("MainShader");
+            //        Initialized = true;
+            //    }
+            //    catch { }
+            //}
+
+            InstancingShader = GlobalShares.GlobalContent.Load<Effect>("MainShader");
+
+            Model = _Model;
             Texture2Ds = new Texture2D[16];
 
             TextureBufferArray = new Vector2[0];

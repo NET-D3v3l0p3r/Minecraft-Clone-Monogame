@@ -12,6 +12,7 @@ using System.Net.Sockets;
 
 using System.IO;
 using MinecraftClone.CoreII.Global;
+using MinecraftClone.Core.Camera;
 
 namespace MinecraftCloneMonoGame.Multiplayer.Global
 {
@@ -19,7 +20,10 @@ namespace MinecraftCloneMonoGame.Multiplayer.Global
     {
 
         private TcpClient _Client;
-        
+
+        private bool _BindOnCamera;
+        private bool _IsConnected;
+
         private StreamReader _Reader;
         private StreamWriter _Writer;
 
@@ -31,6 +35,12 @@ namespace MinecraftCloneMonoGame.Multiplayer.Global
 
         public GlobalNetworkCard NetworkCard { get; set; }
 
+        public enum Event
+        {
+            PushPosition,
+            PushOthers
+        }
+
 
         public GlobalOnlinePlayer(string _wan, int _port)
         {
@@ -38,27 +48,28 @@ namespace MinecraftCloneMonoGame.Multiplayer.Global
             IPeP_Server = new IPEndPoint(IPAddress.Parse(_wan), _port);
 
             _Client = new TcpClient();
-            try
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("...Connecting");
-                _Client.Connect(IPeP_Server);
-            }
-            catch { }
-            if(! _Client.Connected)
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("...Connecting");
+
+            var _Async = _Client.BeginConnect(IPeP_Server.Address.MapToIPv4(), IPeP_Server.Port, null, null);
+            var _Result = _Async.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(60));
+
+            if (!_Result)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(".:ERROR:.");
                 Console.ForegroundColor = ConsoleColor.Gray;
                 return;
             }
+            _Client.EndConnect(_Async);
             Console.WriteLine("SUCCESS");
 
             _Reader = new StreamReader(_Client.GetStream());
             _Writer = new StreamWriter(_Client.GetStream());
 
             _BinWriter = new BinaryWriter(_Client.GetStream());
-            _BinReader = new  BinaryReader(_Client.GetStream());
+            _BinReader = new BinaryReader(_Client.GetStream());
 
             NetworkCard = new GlobalNetworkCard()
             {
@@ -80,7 +91,7 @@ namespace MinecraftCloneMonoGame.Multiplayer.Global
                 {
                     case "STRING":
                         Console.ForegroundColor = ConsoleColor.Gray;
-                        Console.WriteLine("["+ NetworkCard.ID + "]" +  _BinReader.ReadString());
+                        Console.WriteLine("[" + NetworkCard.ID + "]" + _BinReader.ReadString());
                         break;
 
                     case "NETWORK_CARD":
@@ -96,6 +107,11 @@ namespace MinecraftCloneMonoGame.Multiplayer.Global
                         int __Length = _BinReader.ReadInt32();
                         byte[] __Buffer = _BinReader.ReadBytes(__Length);
 
+                        break;
+
+                    case "POSITION":
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                        Console.WriteLine("[POSITION]" + _BinReader.ReadString());
                         break;
                 }
 
@@ -128,6 +144,11 @@ namespace MinecraftCloneMonoGame.Multiplayer.Global
                     t.Start();
                 }
             }
+            else if (_Code == 5)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("MAX_CLIENT_REACHED");
+            }
         }
 
         public bool SendEcho()
@@ -135,9 +156,33 @@ namespace MinecraftCloneMonoGame.Multiplayer.Global
             if (_BinWriter == null)
                 return false;
             _BinWriter.Write("ECHO");
-            _BinWriter.Flush();
 
-            return _BinReader.ReadByte() == 255;
+            return true;
+        }
+
+
+        public void BindOnCamera()
+        {
+            _BindOnCamera = true;
+        }
+
+        public void BindOnKeyboard(Input _keyboard)
+        {
+            _keyboard.BindIPeP_Player(this);
+        }
+
+        public void RaiseEvent(Event _event)
+        {
+            switch (_event)
+            {
+                case Event.PushPosition:
+                    if (_Client.Connected && _BindOnCamera)
+                    {
+                        string _Message = "[POS]|" + NetworkCard.ID + "|" + Camera3D.CameraPosition.X + "|" + Camera3D.CameraPosition.Y + "|" + Camera3D.CameraPosition.Z;
+                        _BinWriter.Write(_Message);
+                    }
+                    break;
+            }
         }
 
 

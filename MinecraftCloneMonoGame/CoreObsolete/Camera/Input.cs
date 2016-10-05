@@ -9,11 +9,13 @@ using System.Linq;
 using System.Text;
 using MinecraftClone.Core.Camera.Key;
 using MinecraftCloneMonoGame.Multiplayer;
+using MinecraftCloneMonoGame.Multiplayer.Global;
 namespace MinecraftClone.Core.Camera
 {
     public class Input
     {
-        private LocalOnlinePlayer _IPeP;
+        private LocalOnlinePlayer _IPeP_Local;
+        private GlobalOnlinePlayer _IPeP_Global;
 
         public List<KeyData> KeyList { get; set; }
 
@@ -44,8 +46,12 @@ namespace MinecraftClone.Core.Camera
                     if (Keyboard.GetState().IsKeyDown(keys.LocalKey))
                     {
                         keys.KeyDown.Invoke();
-                        if (_IPeP != null)
-                            _IPeP.RaiseEvent(LocalOnlinePlayer.Event.PushPosition);
+                        if (_IPeP_Local != null)
+                            _IPeP_Local.RaiseEvent(LocalOnlinePlayer.Event.PushPosition);
+
+                        if (_IPeP_Global != null)
+                            _IPeP_Global.RaiseEvent(GlobalOnlinePlayer.Event.PushPosition);
+
                     }
                     else if (Keyboard.GetState().IsKeyUp(keys.LocalKey))
                         keys.KeyUp.Invoke();
@@ -56,7 +62,12 @@ namespace MinecraftClone.Core.Camera
 
         public void BindIPeP_Player(LocalOnlinePlayer _player)
         {
-            _IPeP = _player;
+            _IPeP_Local = _player;
+        }
+
+        public void BindIPeP_Player(GlobalOnlinePlayer _player)
+        {
+            _IPeP_Global = _player;
         }
 
     }

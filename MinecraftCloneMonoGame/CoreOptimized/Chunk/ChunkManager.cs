@@ -92,6 +92,7 @@ namespace MinecraftClone.CoreII.Chunk
             Models.GlobalModels.IndexTextureTuple.Add((short)Global.GlobalShares.Identification.Dirt, GlobalShares.Dirt);
             Models.GlobalModels.IndexTextureTuple.Add((short)Global.GlobalShares.Identification.Stone, GlobalShares.Stone);
             Models.GlobalModels.IndexTextureTuple.Add((short)Global.GlobalShares.Identification.Water, GlobalShares.Water);
+            Models.GlobalModels.IndexTextureTuple.Add((short)Global.GlobalShares.Identification.Sand, GlobalShares.Sand);
 
             IndexStack = new List<int>();
 
@@ -99,7 +100,7 @@ namespace MinecraftClone.CoreII.Chunk
 
             TerrainGeneratorSimplex = new SimplexNoise.SimplexNoiseGenerator(Seed, 1f / 512f, 1f / 512f, 1f / 512f, 1f / 512f);
             TerrainGeneratorSimplex.Octaves = 5;
-            TerrainGeneratorSimplex.Factor = 200;
+            TerrainGeneratorSimplex.Factor = 90;
             TerrainGeneratorSimplex.Sealevel = SeaLevel;
         }
 
@@ -177,18 +178,18 @@ namespace MinecraftClone.CoreII.Chunk
             }
         }
 
-        private static IEnumerable<Profile> GetAllIntersectingEntitiesLocalAll(Ray r)
+        private static IEnumerable<Profile> GetAllIntersectingEntitiesLocalAll( ChunkOptimized c, Ray r)
         {
             float DistanceToCube = .0f;
             int Face = 0;
-            if (CurrentChunk != null)
+            if (c != null)
             {
-                for (int i = CurrentChunk.IndexRenderer.Count - 1; i >= 0; i--)
+                for (int i = c.IndexRenderer.Count - 1; i >= 0; i--)
                 {
-                    int Index = CurrentChunk.IndexRenderer[i];
-                    float? rParam = CurrentChunk.ChunkData[Index].PickingBox.Intersects(r);
+                    int Index = c.IndexRenderer[i];
+                    float? rParam = c.ChunkData[Index].PickingBox.Intersects(r);
                     if (rParam.HasValue)
-                        yield return new Profile(CurrentChunk, (int)Index, -1, rParam);
+                        yield return new Profile(c, (int)Index, -1, rParam);
                 }
 
             }
@@ -213,9 +214,9 @@ namespace MinecraftClone.CoreII.Chunk
             return null;
         }
 
-        public static Profile? GetFocusedCubeSpecified(float max_dist, Ray r, int id)
+        public static Profile? GetFocusedCubeSpecified( ChunkOptimized c, float max_dist, Ray r, int id)
         {
-            var entities = GetAllIntersectingEntitiesLocalAll(r);
+            var entities = GetAllIntersectingEntitiesLocalAll(c, r);
             if (entities.Count() > 0)
             {
                 var entity = entities.ToList().OrderBy(p => (p.AABB.Min - Camera3D.CameraPosition).Length()).ToList()[0];
@@ -265,6 +266,17 @@ namespace MinecraftClone.CoreII.Chunk
                             GenerateNewChunks(MovedDirection);
                         break;
                     }
+        } 
+
+        public static ChunkOptimized GetChunkArea(Vector3 coordinates, bool @null_overload_no_function = false)
+        {
+            if (ChunkManager.Generated)
+                foreach (var chunk in Chunks)
+                    if (chunk != null && chunk.ChunkArea.Contains(coordinates) == ContainmentType.Contains)
+                    {
+                        return chunk;
+                    }
+            return null;
         }
         public static void GenerateNewChunks(MoveDirection direction)
         {
